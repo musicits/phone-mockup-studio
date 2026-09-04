@@ -1,0 +1,945 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="폰 목업">
+<title>폰 목업 스튜디오</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#EEF0F3; --surface:#FFFFFF; --surface2:#F6F8FA;
+  --ink:#161A20; --ink2:#4B535F; --ink3:#7C8593;
+  --line:#DBDFE6; --line2:#C5CBD4;
+  --accent:#3D5B7D; --accentInk:#FFFFFF; --accentSoft:#E3EAF2; --accentLine:#9DB4CC;
+  --warn:#8A5A15; --warnSoft:#FBF0DC;
+  --stage:#E3E6EA; --checkA:#DBDFE4; --checkB:#EDEFF2;
+  --shadow:0 1px 2px rgba(16,22,30,.06), 0 4px 14px rgba(16,22,30,.05);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#13161A; --surface:#1B1F25; --surface2:#21262D;
+    --ink:#E7EAEF; --ink2:#A6AFBB; --ink3:#757E8B;
+    --line:#2B3039; --line2:#3A424D;
+    --accent:#8FB3D9; --accentInk:#0F1319; --accentSoft:#222D3A; --accentLine:#3E5068;
+    --warn:#D9AE6A; --warnSoft:#2B2418;
+    --stage:#0D1013; --checkA:#171B20; --checkB:#1D2228;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#13161A; --surface:#1B1F25; --surface2:#21262D;
+  --ink:#E7EAEF; --ink2:#A6AFBB; --ink3:#757E8B;
+  --line:#2B3039; --line2:#3A424D;
+  --accent:#8FB3D9; --accentInk:#0F1319; --accentSoft:#222D3A; --accentLine:#3E5068;
+  --warn:#D9AE6A; --warnSoft:#2B2418;
+  --stage:#0D1013; --checkA:#171B20; --checkB:#1D2228;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans KR",-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic",sans-serif;
+  font-size:14px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%;
+}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* 마우스가 없는 기기에서는 드래그·단축키 안내 대신 터치 안내를 보여줍니다 */
+.touch{display:none}
+@media (hover:none) and (pointer:coarse){
+  .desk{display:none}
+  .touch{display:contents}
+}
+
+header{
+  display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;
+  padding:18px 24px; border-bottom:1px solid var(--line); background:var(--surface);
+}
+header h1{margin:0;font-size:16px;font-weight:600;letter-spacing:-.01em}
+header p{margin:0;color:var(--ink3);font-size:12.5px}
+
+.work{display:grid; grid-template-columns:minmax(0,1fr) 336px; min-height:calc(100vh - 61px); min-height:calc(100dvh - 61px)}
+@media (max-width:900px){
+  header{padding:12px 16px;gap:6px;position:sticky;top:0;z-index:30}
+  header p{font-size:11.5px}
+  .work{grid-template-columns:minmax(0,1fr); min-height:0}
+}
+
+/* ---- stage ---- */
+.stage{
+  position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:16px; padding:24px; background:var(--stage); min-height:56vh; overflow:hidden;
+}
+.checks{
+  background-image:
+    linear-gradient(45deg,var(--checkA) 25%,transparent 25%,transparent 75%,var(--checkA) 75%),
+    linear-gradient(45deg,var(--checkA) 25%,var(--checkB) 25%,var(--checkB) 75%,var(--checkA) 75%);
+  background-size:20px 20px; background-position:0 0,10px 10px;
+}
+#preview{width:auto; height:auto; max-width:min(100%,400px); max-height:min(68vh,820px); display:block}
+@media (max-width:900px){
+  .stage{min-height:0; padding:14px 12px; gap:12px}
+  #preview{max-width:min(100%,300px); max-height:52dvh}
+}
+.empty{text-align:center;color:var(--ink3);max-width:340px}
+.empty strong{display:block;color:var(--ink2);font-weight:600;font-size:15px;margin-bottom:6px}
+.stage.drag::after{
+  content:""; position:absolute; inset:12px; border:2px dashed var(--accent);
+  border-radius:14px; background:color-mix(in srgb,var(--accent) 10%,transparent); pointer-events:none;
+}
+
+/* film strip */
+.strip{
+  display:flex; gap:8px; overflow-x:auto; max-width:100%; padding:8px;
+  background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow);
+}
+.strip:empty{display:none}
+.thumb{
+  flex:0 0 auto; position:relative; width:46px; height:82px; border-radius:7px; overflow:hidden;
+  border:2px solid transparent; background:var(--surface2); cursor:pointer; padding:0;
+}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb[aria-current="true"]{border-color:var(--accent)}
+.thumb .num{
+  position:absolute; left:0; bottom:0; padding:1px 4px; font-size:9px;
+  background:rgba(0,0,0,.62); color:#fff; border-top-right-radius:5px;
+}
+
+/* ---- rail ---- */
+.rail{
+  border-left:1px solid var(--line); background:var(--surface);
+  padding:4px 0 28px; overflow-y:auto; max-height:calc(100vh - 61px);
+}
+@media (max-width:900px){ .rail{border-left:0;border-top:1px solid var(--line);max-height:none} }
+.grp{padding:16px 20px; border-bottom:1px solid var(--line)}
+.grp:last-child{border-bottom:0}
+.grp > h2{
+  margin:0 0 10px; font-size:11px; font-weight:600; letter-spacing:.09em;
+  text-transform:uppercase; color:var(--ink3);
+}
+.row{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:9px}
+.row label{color:var(--ink2)}
+.hint{margin:8px 0 0; font-size:12px; color:var(--ink3); line-height:1.55}
+
+button,select,input[type=text]{font:inherit;color:inherit}
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  padding:8px 12px; border:1px solid var(--line2); border-radius:8px;
+  background:var(--surface2); cursor:pointer; transition:border-color .12s,background .12s;
+}
+.btn:hover{border-color:var(--accentLine)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accentInk);font-weight:500}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.wide{width:100%;padding:10px 12px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{
+  flex:1 1 0; min-width:0; padding:8px 6px; border:1px solid var(--line2); border-radius:8px;
+  background:var(--surface2); cursor:pointer; font-size:13px; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis;
+}
+.seg button[aria-pressed="true"]{background:var(--accentSoft);border-color:var(--accentLine);color:var(--accent);font-weight:500}
+
+select{
+  padding:7px 9px; border:1px solid var(--line2); border-radius:8px;
+  background:var(--surface2); cursor:pointer; min-width:118px;
+}
+input[type=color]{
+  width:38px;height:30px;padding:0;border:1px solid var(--line2);border-radius:7px;
+  background:var(--surface2);cursor:pointer;
+}
+input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
+
+.swatches{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sw{
+  border:1px solid var(--line2); border-radius:9px; background:var(--surface2);
+  padding:6px 5px 7px; cursor:pointer; text-align:center; display:grid; gap:5px; justify-items:center;
+}
+.sw[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.sw i{display:block;width:100%;height:26px;border-radius:5px;border:1px solid rgba(0,0,0,.14)}
+.sw span{font-size:10.5px;line-height:1.25;color:var(--ink2)}
+
+.note{
+  display:flex;gap:8px;padding:9px 11px;border-radius:9px;font-size:12px;line-height:1.5;
+  background:var(--warnSoft);color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 30%,transparent);
+}
+.note[hidden]{display:none}
+
+.readout{
+  display:flex;justify-content:space-between;gap:10px;padding:9px 11px;margin-top:10px;
+  border-radius:9px;background:var(--surface2);border:1px solid var(--line);font-size:12.5px;
+}
+.readout b{font-weight:500;color:var(--ink)}
+
+.bar{height:5px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:10px}
+.bar[hidden]{display:none}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .18s}
+#status{margin:8px 0 0;font-size:12px;color:var(--ink2);min-height:1.4em}
+
+/* ---- 완성본 미리보기 시트 ---- */
+.sheet{position:fixed; inset:0; z-index:60; background:rgba(10,13,18,.62); display:flex; align-items:flex-end; justify-content:center}
+.sheet[hidden]{display:none}
+.sheetbox{
+  width:min(100%,640px); max-height:88dvh; display:flex; flex-direction:column;
+  background:var(--surface); border:1px solid var(--line);
+  border-radius:16px 16px 0 0; padding:14px 16px calc(16px + env(safe-area-inset-bottom));
+}
+@media (min-width:901px){ .sheet{align-items:center} .sheetbox{border-radius:16px} }
+.sheethead{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sheethead b{font-size:15px;font-weight:600}
+.sheetlist{overflow-y:auto; display:grid; gap:14px; margin-top:12px; -webkit-overflow-scrolling:touch}
+.shot{margin:0; display:grid; gap:6px; justify-items:center}
+.shot img{
+  max-width:100%; max-height:58dvh; display:block; border-radius:10px;
+  border:1px solid var(--line); background:var(--surface2);
+  -webkit-touch-callout:default; /* 길게 눌러 저장이 되도록 */
+}
+.shot figcaption{font-size:11.5px;color:var(--ink3);word-break:break-all;text-align:center}
+
+/* ---- 모바일: 손가락으로 누를 수 있는 크기와 하단 고정 바 ---- */
+.dock{display:none}
+@media (max-width:900px){
+  .grp{padding:14px 16px}
+  .btn,.seg button,select{min-height:44px}
+  .sw{padding:8px 6px 9px}
+  .sw i{height:32px}
+  .thumb{width:54px;height:96px}
+  input[type=color]{width:46px;height:36px}
+  input[type=checkbox]{width:22px;height:22px}
+  .row{margin-top:12px}
+  /* 하단 고정 바에 가려지지 않도록 여백 */
+  .rail{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+  .dock{
+    display:flex; gap:8px; position:fixed; left:0; right:0; bottom:0; z-index:40;
+    padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+    background:color-mix(in srgb,var(--surface) 92%,transparent);
+    backdrop-filter:saturate(180%) blur(12px);
+    border-top:1px solid var(--line);
+  }
+  .dock button{flex:1 1 0; min-height:46px; font-size:14px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<h2 class="sr">스마트폰 스크린샷을 iPhone 17 Pro Max 또는 Galaxy S26 Ultra 목업 프레임에 합성해 PNG로 저장하는 도구</h2>
+
+<header>
+  <h1>폰 목업 스튜디오</h1>
+  <p>
+    스크린샷을 넣으면 기기 프레임에 맞춰 합성합니다
+    <span class="desk">&middot; 드래그, 붙여넣기(<span class="mono">Ctrl/⌘+V</span>) 지원</span>
+    <span class="touch">&middot; 사진첩에서 골라 바로 저장</span>
+  </p>
+</header>
+
+<main class="work">
+  <section class="stage checks" id="stage" aria-label="미리보기">
+    <div class="empty" id="empty">
+      <span class="desk">
+        <strong>스크린샷을 여기에 끌어다 놓으세요</strong>
+        여러 장을 한 번에 넣어도 됩니다. 복사한 이미지는 <span class="mono">Ctrl/⌘+V</span>로 바로 붙여넣을 수 있습니다.
+      </span>
+      <span class="touch">
+        <strong>아래 ‘사진 선택’을 눌러 시작하세요</strong>
+        사진첩에서 스크린샷을 여러 장 한 번에 고를 수 있습니다.
+      </span>
+    </div>
+    <canvas id="preview" hidden></canvas>
+    <div class="strip" id="strip" aria-label="불러온 스크린샷"></div>
+  </section>
+
+  <aside class="rail">
+    <div class="grp">
+      <h2>스크린샷</h2>
+      <button class="btn wide" id="pick">파일 선택</button>
+      <input type="file" id="file" accept="image/*" multiple hidden>
+      <p class="hint" id="count">불러온 이미지 없음</p>
+      <div class="row" id="clearRow" hidden>
+        <button class="btn" id="clear" style="width:100%">전체 비우기</button>
+      </div>
+    </div>
+
+    <div class="grp">
+      <h2>기기</h2>
+      <div class="seg" id="devSeg"></div>
+      <div class="row" id="resRow">
+        <label for="res">화면 해상도</label>
+        <select id="res"></select>
+      </div>
+      <p class="hint" id="devSpec"></p>
+    </div>
+
+    <div class="grp">
+      <h2>색상</h2>
+      <div class="swatches" id="swatches"></div>
+    </div>
+
+    <div class="grp">
+      <h2>화면</h2>
+      <div class="seg" id="fitSeg">
+        <button type="button" data-v="cover">채움 (잘림)</button>
+        <button type="button" data-v="contain">맞춤 (여백)</button>
+      </div>
+      <div class="row">
+        <label for="letter">맞춤 여백 색</label>
+        <input type="color" id="letter" value="#000000">
+      </div>
+      <div class="row">
+        <label for="sheen">화면 유리 반사</label>
+        <input type="checkbox" id="sheen">
+      </div>
+      <div class="note" id="aspectNote" hidden>
+        <span>이 스크린샷은 기기 화면 비율과 다릅니다. <b id="aspectDetail"></b></span>
+      </div>
+    </div>
+
+    <div class="grp">
+      <h2>배경</h2>
+      <div class="seg" id="bgSeg">
+        <button type="button" data-v="none">투명</button>
+        <button type="button" data-v="solid">단색</button>
+        <button type="button" data-v="grad">그라디언트</button>
+      </div>
+      <div class="row" id="bg1Row">
+        <label for="bg1">색상</label>
+        <input type="color" id="bg1" value="#FFFFFF">
+      </div>
+      <div class="row" id="bg2Row" hidden>
+        <label for="bg2">끝 색상</label>
+        <input type="color" id="bg2" value="#DCE6F0">
+      </div>
+      <div class="row">
+        <label for="pad">기기 주변 여백</label>
+        <select id="pad">
+          <option value="0">없음</option>
+          <option value="0.06" selected>좁게</option>
+          <option value="0.13">보통</option>
+          <option value="0.22">넓게</option>
+        </select>
+      </div>
+      <div class="row">
+        <label for="shadow">그림자</label>
+        <input type="checkbox" id="shadow" checked>
+      </div>
+    </div>
+
+    <div class="grp">
+      <h2>내보내기</h2>
+      <div class="row">
+        <label for="width">가로 폭</label>
+        <select id="width">
+          <option value="600">600 px</option>
+          <option value="800">800 px</option>
+          <option value="900" selected>900 px (블로그)</option>
+          <option value="1200">1200 px</option>
+          <option value="1600">1600 px</option>
+          <option value="native">원본 화질</option>
+        </select>
+      </div>
+      <div class="readout">
+        <span>최종 크기</span><b class="mono" id="outSize">—</b>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn primary" id="saveOne" style="flex:1" disabled>현재 장 저장</button>
+      </div>
+      <div class="row">
+        <button class="btn wide" id="saveAll" disabled>전체 저장</button>
+      </div>
+      <div class="bar" id="bar" hidden><i id="barFill"></i></div>
+      <p id="status"></p>
+    </div>
+  </aside>
+</main>
+
+<!-- 좁은 화면에서만 보이는 하단 고정 바. 레일의 같은 버튼을 대신 눌러 줍니다. -->
+<div class="dock" id="dock">
+  <button class="btn" id="dockPick" type="button">사진 선택</button>
+  <button class="btn primary" id="dockSave" type="button" disabled>저장</button>
+</div>
+
+<!-- 공유 시트를 못 여는 브라우저를 위한 완성본 미리보기 -->
+<div class="sheet" id="sheet" hidden>
+  <div class="sheetbox" role="dialog" aria-modal="true" aria-label="완성된 목업">
+    <div class="sheethead">
+      <b>완성된 목업</b>
+      <button class="btn" id="sheetClose" type="button">닫기</button>
+    </div>
+    <p class="hint">이미지를 <b>길게 누른 뒤</b> ‘사진에 추가’ 또는 ‘이미지 저장’을 선택하세요.</p>
+    <div class="sheetlist" id="sheetList"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ── 프레임 자산 정의 ───────────────────────────────────────────────
+   각 기기는 뷰박스(vb) 안에서 몸체(body)와 화면(screen) 좌표를 갖습니다.
+   frame()은 화면 부분이 뚫린 SVG를 돌려주고, 합성 시 스크린샷 위에 덮습니다.
+   나중에 PNG 프레임을 추가할 때도 같은 좌표 규약만 맞추면 됩니다.        */
+
+/* 금속 테두리 그라디언트.
+   bz = 베젤 폭 ÷ 몸체 폭. 반사 하이라이트를 베젤 안쪽이 아니라 바깥 모서리
+   가까이에 좁게 두어야 금속처럼 읽힙니다. 밝은 띠가 베젤 전체로 퍼지면
+   플라스틱처럼 보입니다. */
+function metalStops(c, bz){
+  const at=(f,col)=>`<stop offset="${Math.min(f*bz,.49).toFixed(5)}" stop-color="${col}"/>`;
+  const rt=(f,col)=>`<stop offset="${Math.max(1-f*bz,.51).toFixed(5)}" stop-color="${col}"/>`;
+  const ramp=[[0.15,c.hi],[0.45,c.mid],[0.85,c.dk],[1.05,c.lo],[1.95,c.mid]];
+  return `<stop offset="0" stop-color="${c.lo}"/>`
+    + ramp.map(([f,col])=>at(f,col)).join("")
+    + `<stop offset=".5" stop-color="${c.mid}"/>`
+    + ramp.slice().reverse().map(([f,col])=>rt(f,col)).join("")
+    + `<stop offset="1" stop-color="${c.lo}"/>`;
+}
+const VERT = `<stop offset="0" stop-color="#fff" stop-opacity=".26"/>
+  <stop offset=".045" stop-color="#fff" stop-opacity="0"/>
+  <stop offset=".955" stop-color="#000" stop-opacity="0"/>
+  <stop offset="1" stop-color="#000" stop-opacity=".3"/>`;
+const SHEEN = `<stop offset="0" stop-color="#fff" stop-opacity=".13"/>
+  <stop offset=".33" stop-color="#fff" stop-opacity=".02"/>
+  <stop offset=".34" stop-color="#fff" stop-opacity="0"/>`;
+
+const DEVICES = {
+  ip17pm:{
+    name:"iPhone 17 Pro Max", slug:"iphone17promax",
+    vb:{x:-14,y:0,w:804,h:1634},
+    body:{x:0,y:0,w:776,h:1634,r:118},
+    screen:{x:24,y:25,w:728,h:1584,r:94},
+    modes:[{id:"native",label:"2868 × 1320",w:1320,h:2868}],
+    colors:[
+      {id:"cosmic-orange",name:"코스믹 오렌지",mid:"#C25A26",dk:"#9E4419",hi:"#F2A876",lo:"#6E2C0C",btn:"#A94A1D"},
+      {id:"deep-blue",    name:"딥 블루",      mid:"#2E4463",dk:"#22344E",hi:"#8CA5C6",lo:"#141F33",btn:"#2A3E5A"},
+      {id:"silver",       name:"실버",         mid:"#D4D8DC",dk:"#B4BABF",hi:"#FFFFFF",lo:"#8A8F94",btn:"#C4C9CE"}
+    ],
+    frame(c,sheen){
+      const bd=this.body, sc=this.screen, vb=this.vb;
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}">
+<defs>
+  <linearGradient id="rail" x1="0" y1="0" x2="1" y2="0">${metalStops(c, sc.x/bd.w)}</linearGradient>
+  <linearGradient id="vert" x1="0" y1="0" x2="0" y2="1">${VERT}</linearGradient>
+  <linearGradient id="shn" x1="0" y1="0" x2=".72" y2="1">${SHEEN}</linearGradient>
+  <mask id="hole">
+    <rect x="${bd.x}" y="${bd.y}" width="${bd.w}" height="${bd.h}" rx="${bd.r}" fill="#fff"/>
+    <rect x="${sc.x}" y="${sc.y}" width="${sc.w}" height="${sc.h}" rx="${sc.r}" fill="#000"/>
+  </mask>
+  <clipPath id="scr"><rect x="${sc.x}" y="${sc.y}" width="${sc.w}" height="${sc.h}" rx="${sc.r}"/></clipPath>
+</defs>
+<g fill="${c.btn}">
+  <rect x="-10" y="334" width="12" height="58" rx="6"/>
+  <rect x="-10" y="448" width="12" height="102" rx="6"/>
+  <rect x="-10" y="580" width="12" height="102" rx="6"/>
+  <rect x="774" y="488" width="12" height="164" rx="6"/>
+  <rect x="774" y="744" width="12" height="88" rx="6"/>
+</g>
+<g mask="url(#hole)">
+  <rect x="${bd.x}" y="${bd.y}" width="${bd.w}" height="${bd.h}" rx="${bd.r}" fill="url(#rail)"/>
+  <rect x="${bd.x}" y="${bd.y}" width="${bd.w}" height="${bd.h}" rx="${bd.r}" fill="url(#vert)"/>
+  <g fill="#000" opacity=".17">
+    <rect x="0" y="262" width="26" height="5"/><rect x="750" y="262" width="26" height="5"/>
+    <rect x="0" y="1372" width="26" height="5"/><rect x="750" y="1372" width="26" height="5"/>
+  </g>
+  <rect x="1.6" y="1.6" width="${bd.w-3.2}" height="${bd.h-3.2}" rx="${bd.r-1.6}" fill="none" stroke="#fff" stroke-opacity=".34" stroke-width="3.2"/>
+</g>
+<rect x="${sc.x+2}" y="${sc.y+2}" width="${sc.w-4}" height="${sc.h-4}" rx="${sc.r-2}" fill="none" stroke="#000" stroke-opacity=".55" stroke-width="4"/>
+<rect x="263" y="59" width="250" height="82" rx="41" fill="#000"/>
+<circle cx="470" cy="100" r="15.5" fill="#0C1420"/>
+<circle cx="470" cy="100" r="7" fill="#16243A" opacity=".85"/>
+${sheen?`<g clip-path="url(#scr)"><rect x="${sc.x}" y="${sc.y}" width="${sc.w}" height="${sc.h}" fill="url(#shn)"/></g>`:""}
+</svg>`;
+    }
+  },
+
+  s26u:{
+    name:"Galaxy S26 Ultra", slug:"galaxys26ultra",
+    vb:{x:-14,y:0,w:807,h:1634},
+    body:{x:0,y:0,w:779,h:1634,r:50},
+    screen:{x:17,y:17,w:745,h:1600,r:36},
+    modes:[
+      {id:"qhd", label:"QHD+ 3120 × 1440", w:1440,h:3120},
+      {id:"fhd", label:"FHD+ 2340 × 1080", w:1080,h:2340},
+      {id:"hd",  label:"HD+ 1560 × 720",   w:720, h:1560}
+    ],
+    colors:[
+      {id:"cobalt-violet",name:"코발트 바이올렛",mid:"#4A4370",dk:"#393357",hi:"#B0A8D2",lo:"#221C3B",btn:"#3B3560"},
+      {id:"sky-blue",     name:"스카이 블루",   mid:"#7FA8C9",dk:"#628CAE",hi:"#DCEAF5",lo:"#3C5A73",btn:"#6E97B8"},
+      {id:"white",        name:"화이트",        mid:"#E6E6E9",dk:"#C8C8CD",hi:"#FFFFFF",lo:"#9FA0A5",btn:"#D6D6DB"},
+      {id:"black",        name:"블랙",          mid:"#2A2B2E",dk:"#1E1F22",hi:"#82858B",lo:"#111214",btn:"#232427"},
+      {id:"silver-shadow",name:"실버 섀도우",   mid:"#8C9095",dk:"#73777C",hi:"#DFE2E6",lo:"#4B4F53",btn:"#7C8085"},
+      {id:"pink-gold",    name:"핑크 골드",     mid:"#D8AD98",dk:"#BC907B",hi:"#F9E0D1",lo:"#96694F",btn:"#C99C87"}
+    ],
+    frame(c,sheen){
+      const bd=this.body, sc=this.screen, vb=this.vb;
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}">
+<defs>
+  <linearGradient id="rail" x1="0" y1="0" x2="1" y2="0">${metalStops(c, sc.x/bd.w)}</linearGradient>
+  <linearGradient id="vert" x1="0" y1="0" x2="0" y2="1">${VERT}</linearGradient>
+  <linearGradient id="shn" x1="0" y1="0" x2=".72" y2="1">${SHEEN}</linearGradient>
+  <mask id="hole">
+    <rect x="${bd.x}" y="${bd.y}" width="${bd.w}" height="${bd.h}" rx="${bd.r}" fill="#fff"/>
+    <rect x="${sc.x}" y="${sc.y}" width="${sc.w}" height="${sc.h}" rx="${sc.r}" fill="#000"/>
+  </mask>
+  <clipPath id="scr"><rect x="${sc.x}" y="${sc.y}" width="${sc.w}" height="${sc.h}" rx="${sc.r}"/></clipPath>
+</defs>
+<g fill="${c.btn}">
+  <rect x="777" y="432" width="12" height="178" rx="6"/>
+  <rect x="777" y="650" width="12" height="92" rx="6"/>
+</g>
+<g mask="url(#hole)">
+  <rect x="${bd.x}" y="${bd.y}" width="${bd.w}" height="${bd.h}" rx="${bd.r}" fill="url(#rail)"/>
+  <rect x="${bd.x}" y="${bd.y}" width="${bd.w}" height="${bd.h}" rx="${bd.r}" fill="url(#vert)"/>
+  <rect x="96" y="${bd.h-6}" width="150" height="6" fill="#000" opacity=".22"/>
+  <rect x="1.5" y="1.5" width="${bd.w-3}" height="${bd.h-3}" rx="${bd.r-1.5}" fill="none" stroke="#fff" stroke-opacity=".32" stroke-width="3"/>
+</g>
+<rect x="${sc.x+2}" y="${sc.y+2}" width="${sc.w-4}" height="${sc.h-4}" rx="${sc.r-2}" fill="none" stroke="#000" stroke-opacity=".5" stroke-width="4"/>
+<circle cx="389.5" cy="79" r="19" fill="#000"/>
+<circle cx="389.5" cy="79" r="11.5" fill="#0B1626"/>
+<circle cx="389.5" cy="79" r="5" fill="#1B2C46" opacity=".9"/>
+${sheen?`<g clip-path="url(#scr)"><rect x="${sc.x}" y="${sc.y}" width="${sc.w}" height="${sc.h}" fill="url(#shn)"/></g>`:""}
+</svg>`;
+    }
+  }
+};
+
+/* ── 상태 ─────────────────────────────────────────────────────── */
+const S = {
+  dev:"ip17pm", color:"cosmic-orange", mode:"native",
+  fit:"cover", letter:"#000000", sheen:false,
+  bg:"none", bg1:"#FFFFFF", bg2:"#DCE6F0", pad:0.06, shadow:true,
+  width:"900", shots:[], idx:0
+};
+const $ = id => document.getElementById(id);
+const dev = () => DEVICES[S.dev];
+const color = () => dev().colors.find(c=>c.id===S.color) || dev().colors[0];
+const mode = () => dev().modes.find(m=>m.id===S.mode) || dev().modes[0];
+
+/* ── 설정 저장 ─────────────────────────────────────────────────── */
+const KEYS=["dev","color","mode","fit","letter","sheen","bg","bg1","bg2","pad","shadow","width"];
+function saveCfg(){ try{ const o={}; KEYS.forEach(k=>o[k]=S[k]); localStorage.setItem("phone-mockup",JSON.stringify(o)); }catch(e){} }
+function loadCfg(){
+  try{
+    const o=JSON.parse(localStorage.getItem("phone-mockup")||"{}");
+    KEYS.forEach(k=>{ if(o[k]!==undefined) S[k]=o[k]; });
+    if(!DEVICES[S.dev]) S.dev="ip17pm";
+    if(!dev().colors.some(c=>c.id===S.color)) S.color=dev().colors[0].id;
+    if(!dev().modes.some(m=>m.id===S.mode)) S.mode=dev().modes[0].id;
+  }catch(e){}
+}
+
+/* ── 이미지 로딩 (한 장씩 디코딩해 메모리를 평탄하게 유지) ────────── */
+function loadImage(src){
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    img.onload=()=>res(img);
+    img.onerror=()=>rej(new Error("이미지를 열 수 없습니다"));
+    img.src=src;
+  });
+}
+async function withFile(file,fn){
+  const url=URL.createObjectURL(file);
+  try{ return await fn(await loadImage(url)); }
+  finally{ URL.revokeObjectURL(url); }
+}
+const frameCache=new Map();
+async function frameImage(){
+  const key=`${S.dev}|${S.color}|${S.sheen}`;
+  if(frameCache.has(key)) return frameCache.get(key);
+  const svg=dev().frame(color(),S.sheen);
+  const img=await loadImage("data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg));
+  frameCache.set(key,img);
+  return img;
+}
+
+/* ── 출력 크기 계산 ────────────────────────────────────────────── */
+function outputSize(){
+  const d=dev(), pad=S.pad*d.vb.w;
+  const totalU=d.vb.w+pad*2, totalH=d.vb.h+pad*2;
+  let w;
+  if(S.width==="native") w=Math.round(totalU*(mode().w/d.screen.w));
+  else w=parseInt(S.width,10);
+  return {w, h:Math.round(w*totalH/totalU), scale:w/totalU, padU:pad, totalU, totalHU:totalH};
+}
+
+/* ── 합성 ──────────────────────────────────────────────────────── */
+function rr(ctx,x,y,w,h,r){
+  r=Math.min(r,w/2,h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+async function compose(canvas, shotImg, out){
+  const d=dev(), ctx=canvas.getContext("2d");
+  canvas.width=out.w; canvas.height=out.h;
+  const k=out.scale;
+  const ox=(out.padU-d.vb.x)*k, oy=(out.padU-d.vb.y)*k;   // 뷰박스 원점 → 캔버스 좌표
+  const U=n=>n*k;
+
+  ctx.clearRect(0,0,out.w,out.h);
+
+  // 1. 배경
+  if(S.bg==="solid"){ ctx.fillStyle=S.bg1; ctx.fillRect(0,0,out.w,out.h); }
+  else if(S.bg==="grad"){
+    const g=ctx.createLinearGradient(0,0,0,out.h);
+    g.addColorStop(0,S.bg1); g.addColorStop(1,S.bg2);
+    ctx.fillStyle=g; ctx.fillRect(0,0,out.w,out.h);
+  }
+
+  // 2. 그림자 (기기 윤곽을 채워 그린 뒤 그 위를 프레임이 덮음)
+  if(S.shadow){
+    ctx.save();
+    ctx.shadowColor="rgba(12,16,22,.34)";
+    ctx.shadowBlur=U(d.vb.w*0.055);
+    ctx.shadowOffsetY=U(d.vb.w*0.028);
+    ctx.fillStyle=color().mid;
+    rr(ctx, ox+U(d.body.x), oy+U(d.body.y), U(d.body.w), U(d.body.h), U(d.body.r));
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // 3. 스크린샷 (화면 라운드 사각형으로 클리핑)
+  const sx=ox+U(d.screen.x), sy=oy+U(d.screen.y), sw=U(d.screen.w), sh=U(d.screen.h);
+  if(shotImg){
+    ctx.save();
+    rr(ctx,sx,sy,sw,sh,U(d.screen.r));
+    ctx.clip();
+    if(S.fit==="contain"){ ctx.fillStyle=S.letter; ctx.fillRect(sx,sy,sw,sh); }
+    const ar=shotImg.naturalWidth/shotImg.naturalHeight, target=sw/sh;
+    let dw,dh;
+    if(S.fit==="cover" ? ar>target : ar<target){ dh=sh; dw=sh*ar; }
+    else { dw=sw; dh=sw/ar; }
+    ctx.imageSmoothingQuality="high";
+    ctx.drawImage(shotImg, sx+(sw-dw)/2, sy+(sh-dh)/2, dw, dh);
+    ctx.restore();
+  } else {
+    ctx.save(); rr(ctx,sx,sy,sw,sh,U(d.screen.r));
+    ctx.fillStyle="#0B0D10"; ctx.fill(); ctx.restore();
+  }
+
+  // 4. 프레임 덮기
+  const f=await frameImage();
+  ctx.drawImage(f, ox+U(d.vb.x), oy+U(d.vb.y), U(d.vb.w), U(d.vb.h));
+}
+
+/* ── 미리보기 ─────────────────────────────────────────────────── */
+let renderToken=0;
+async function render(){
+  const token=++renderToken;
+  const out=outputSize();
+  $("outSize").textContent=`${out.w} × ${out.h} px`;
+
+  const shot=S.shots[S.idx];
+  const cv=$("preview");
+  const previewW=Math.min(out.w, 760);
+  const pOut={...out, w:previewW, h:Math.round(previewW*out.totalHU/out.totalU),
+              scale:previewW/out.totalU, padU:out.padU};
+
+  const draw = img => { if(token===renderToken) return compose(cv,img,pOut); };
+  if(shot) await withFile(shot.file, draw); else await draw(null);
+  if(token!==renderToken) return;
+
+  cv.hidden=false; $("empty").hidden=S.shots.length>0;
+  checkAspect(shot);
+}
+function checkAspect(shot){
+  const n=$("aspectNote");
+  if(!shot||!shot.w){ n.hidden=true; return; }
+  const d=dev(), target=d.screen.h/d.screen.w, ar=shot.h/shot.w;
+  if(Math.abs(ar-target)/target < 0.02){ n.hidden=true; return; }
+  $("aspectDetail").textContent =
+    `스크린샷 ${shot.w}×${shot.h} (${ar.toFixed(2)}:1), 기기 화면은 ${target.toFixed(2)}:1. ` +
+    (S.fit==="cover" ? "‘채움’이라 가장자리가 잘립니다." : "‘맞춤’이라 여백이 생깁니다.");
+  n.hidden=false;
+}
+
+/* ── 파일 처리 ─────────────────────────────────────────────────── */
+async function addFiles(files){
+  const list=[...files].filter(f=>f.type.startsWith("image/"));
+  if(!list.length) return;
+  const start=S.shots.length;
+  setStatus(`이미지 ${list.length}장 불러오는 중…`);
+  for(const file of list){
+    try{
+      const meta=await withFile(file, img=>{
+        const c=document.createElement("canvas");
+        const h=92, w=Math.max(1,Math.round(h*img.naturalWidth/img.naturalHeight));
+        c.width=w; c.height=h;
+        c.getContext("2d").drawImage(img,0,0,w,h);
+        return {w:img.naturalWidth, h:img.naturalHeight, thumb:c.toDataURL("image/jpeg",0.7)};
+      });
+      S.shots.push({file, name:file.name, ...meta});
+    }catch(e){ /* 열 수 없는 파일은 건너뜀 */ }
+  }
+  if(S.shots.length>start) S.idx=start;
+  setStatus(`${S.shots.length}장 준비 완료`);
+  refreshShots(); render();
+}
+function refreshShots(){
+  const n=S.shots.length;
+  $("count").textContent = n ? `${n}장 불러옴 · 썸네일을 눌러 전환` : "불러온 이미지 없음";
+  $("clearRow").hidden = n===0;
+  $("saveOne").disabled = n===0;
+  $("saveAll").disabled = n===0;
+  $("saveAll").textContent = n>1 ? `전체 저장 (${n}장)` : "전체 저장";
+  $("dockSave").disabled = n===0;
+  $("dockSave").textContent = n>1 ? `전체 저장 (${n}장)` : "저장";
+  const strip=$("strip");
+  strip.textContent="";
+  S.shots.forEach((s,i)=>{
+    const b=document.createElement("button");
+    b.className="thumb"; b.type="button";
+    b.setAttribute("aria-current", i===S.idx?"true":"false");
+    b.title=`${i+1}. ${s.name}`;
+    b.setAttribute("aria-label", `${i+1}번째 스크린샷 ${s.name}`);
+    b.innerHTML=`<img src="${s.thumb}" alt=""><span class="num">${i+1}</span>`;
+    b.onclick=()=>{ S.idx=i; refreshShots(); render(); };
+    strip.appendChild(b);
+  });
+}
+
+/* ── 저장 ──────────────────────────────────────────────────────── */
+let dl=null, dlChecked=false;
+async function downloads(){
+  if(dlChecked) return dl;
+  dlChecked=true;
+  try{ if(window.claude&&window.claude.use) dl=await window.claude.use("downloads"); }catch(e){ dl=null; }
+  return dl;
+}
+function canvasBlob(cv){
+  return new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error("이미지를 만들지 못했습니다")),"image/png"));
+}
+function outName(shot,i){
+  const base=(shot?shot.name:"mockup").replace(/\.[^.]+$/,"").slice(0,60) || `mockup-${i+1}`;
+  return `${base}_${dev().slug}-${S.color}.png`;
+}
+async function saveBlob(name,blob){
+  const d=await downloads();
+  if(d){ await d.save({filename:name, data:blob}); return; }
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 5000);
+}
+
+/* ── 모바일 저장 ───────────────────────────────────────────────────
+   휴대폰 브라우저에서는 <a download>가 동작하지 않거나 첫 장만 받아집니다.
+   1순위는 공유 시트(navigator.share)로 사진첩에 바로 넣는 길,
+   2순위는 완성본을 화면에 띄워 길게 눌러 저장하는 길입니다.
+   공유 시트는 탭 직후에만 열 수 있어서 합성이 길어지면 실패하는데,
+   그때 2순위가 받아 주므로 어느 기기에서도 빈손으로 끝나지 않습니다. */
+const isTouch = () => matchMedia("(hover:none) and (pointer:coarse)").matches;
+function canShareFiles(files){
+  try{ return !!(navigator.canShare && navigator.share && navigator.canShare({files})); }
+  catch(e){ return false; }
+}
+let sheetUrls=[];
+function showResults(items){
+  const list=$("sheetList"); list.textContent="";
+  sheetUrls.forEach(u=>URL.revokeObjectURL(u)); sheetUrls=[];
+  items.forEach(it=>{
+    const url=URL.createObjectURL(it.blob); sheetUrls.push(url);
+    const fig=document.createElement("figure");
+    fig.className="shot";
+    fig.innerHTML=`<img src="${url}" alt="${it.name}"><figcaption>${it.name}</figcaption>`;
+    list.appendChild(fig);
+  });
+  $("sheet").hidden=false;
+  document.body.style.overflow="hidden";
+}
+function closeResults(){
+  $("sheet").hidden=true;
+  document.body.style.overflow="";
+  sheetUrls.forEach(u=>URL.revokeObjectURL(u)); sheetUrls=[];
+  $("sheetList").textContent="";
+}
+function setStatus(t){ $("status").textContent=t; }
+function progress(done,total){
+  const bar=$("bar");
+  if(total<=1){ bar.hidden=true; return; }
+  bar.hidden=false; $("barFill").style.width=(done/total*100).toFixed(1)+"%";
+}
+
+let busy=false;
+
+/* 지정한 장들을 순서대로 합성해 PNG 블롭으로 모읍니다 (모바일 경로 전용). */
+async function renderAll(indices, cv, out){
+  const items=[]; let done=0;
+  for(const i of indices){
+    const shot=S.shots[i];
+    setStatus(`${done+1}/${indices.length} 합성 중… ${shot.name}`);
+    progress(done,indices.length);
+    await withFile(shot.file, img=>compose(cv,img,out));
+    const blob=await canvasBlob(cv);
+    items.push({name:outName(shot,i), blob});
+    done++; progress(done,indices.length);
+    await new Promise(r=>setTimeout(r,0));
+  }
+  return items;
+}
+
+async function exportShots(indices){
+  if(busy) return;
+  busy=true; $("saveOne").disabled=true; $("saveAll").disabled=true; $("dockSave").disabled=true;
+  const out=outputSize();
+  const cv=document.createElement("canvas");
+  let done=0, saved=0;
+  try{
+    if(isTouch() && !(await downloads())){
+      const items=await renderAll(indices,cv,out);
+      const files=items.map(it=>new File([it.blob],it.name,{type:"image/png"}));
+      if(canShareFiles(files)){
+        try{
+          await navigator.share({files, title:"폰 목업"});
+          setStatus(`${files.length}장 공유했습니다. 사진첩을 확인해 주세요.`);
+          return;
+        }catch(err){
+          if(err && err.name==="AbortError"){ setStatus("저장을 취소했습니다."); return; }
+          /* 공유 시트를 열지 못했을 때는 아래 미리보기로 넘깁니다 */
+        }
+      }
+      showResults(items);
+      setStatus(`${items.length}장 완성했습니다.`);
+      return;
+    }
+    for(const i of indices){
+      const shot=S.shots[i];
+      setStatus(`${done+1}/${indices.length} 합성 중… ${shot.name}`);
+      progress(done,indices.length);
+      await withFile(shot.file, img=>compose(cv,img,out));
+      const blob=await canvasBlob(cv);
+      try{
+        await saveBlob(outName(shot,i), blob);
+        saved++;
+      }catch(err){
+        const code=err&&err.code;
+        if(code==="declined"){ setStatus(`저장을 취소했습니다. ${saved}장 저장됨.`); return; }
+        if(code==="too_large"){ setStatus(`${shot.name}: 파일이 16MB를 넘습니다. 가로 폭을 줄여 주세요.`); return; }
+        if(code==="rate_limited"){ setStatus(`저장 요청이 몰렸습니다. 잠시 뒤 남은 장을 다시 저장해 주세요. ${saved}장 저장됨.`); return; }
+        setStatus(`${shot.name} 저장 실패: ${(err&&err.message)||"알 수 없는 오류"}`); return;
+      }
+      done++;
+      progress(done,indices.length);
+      await new Promise(r=>setTimeout(r,0));
+    }
+    setStatus(`${saved}장 저장했습니다.`);
+  } finally {
+    busy=false; refreshShots();
+    setTimeout(()=>{ $("bar").hidden=true; }, 1200);
+  }
+}
+
+/* ── UI 구성 ──────────────────────────────────────────────────── */
+function buildDeviceSeg(){
+  const seg=$("devSeg"); seg.textContent="";
+  Object.entries(DEVICES).forEach(([id,d])=>{
+    const b=document.createElement("button");
+    b.type="button"; b.textContent=d.name;
+    b.setAttribute("aria-pressed", id===S.dev?"true":"false");
+    b.onclick=()=>{
+      S.dev=id;
+      if(!dev().colors.some(c=>c.id===S.color)) S.color=dev().colors[0].id;
+      if(!dev().modes.some(m=>m.id===S.mode)) S.mode=dev().modes[0].id;
+      buildDeviceSeg(); buildSwatches(); buildModes(); saveCfg(); render();
+    };
+    seg.appendChild(b);
+  });
+}
+function buildSwatches(){
+  const g=$("swatches"); g.textContent="";
+  dev().colors.forEach(c=>{
+    const b=document.createElement("button");
+    b.type="button"; b.className="sw";
+    b.setAttribute("aria-pressed", c.id===S.color?"true":"false");
+    b.innerHTML=`<i style="background:linear-gradient(100deg,${c.lo} 0%,${c.hi} 7%,${c.dk} 18%,${c.mid} 50%,${c.dk} 82%,${c.hi} 93%,${c.lo} 100%)"></i><span>${c.name}</span>`;
+    b.onclick=()=>{ S.color=c.id; buildSwatches(); saveCfg(); render(); };
+    g.appendChild(b);
+  });
+}
+function buildModes(){
+  const sel=$("res"); sel.textContent="";
+  const d=dev();
+  d.modes.forEach(m=>{
+    const o=document.createElement("option");
+    o.value=m.id; o.textContent=m.label; sel.appendChild(o);
+  });
+  sel.value=S.mode;
+  $("resRow").hidden = d.modes.length<2;
+  $("devSpec").textContent = `권장 스크린샷 ${mode().w} × ${mode().h} px` +
+    (d.modes.length>1 ? " · 기기 설정의 화면 해상도와 맞추세요" : "");
+}
+function bindSeg(id,key,after){
+  const seg=$(id);
+  [...seg.children].forEach(b=>{
+    b.setAttribute("aria-pressed", b.dataset.v===S[key]?"true":"false");
+    b.onclick=()=>{
+      S[key]=b.dataset.v;
+      [...seg.children].forEach(x=>x.setAttribute("aria-pressed", x.dataset.v===S[key]?"true":"false"));
+      if(after) after();
+      saveCfg(); render();
+    };
+  });
+}
+function syncBg(){
+  $("bg1Row").hidden = S.bg==="none";
+  $("bg2Row").hidden = S.bg!=="grad";
+}
+
+/* ── 초기화 ───────────────────────────────────────────────────── */
+loadCfg();
+buildDeviceSeg(); buildSwatches(); buildModes();
+bindSeg("fitSeg","fit"); bindSeg("bgSeg","bg",syncBg); syncBg();
+
+$("letter").value=S.letter; $("bg1").value=S.bg1; $("bg2").value=S.bg2;
+$("sheen").checked=S.sheen; $("shadow").checked=S.shadow;
+$("pad").value=String(S.pad); $("width").value=S.width;
+
+$("res").onchange=e=>{ S.mode=e.target.value; buildModes(); saveCfg(); render(); };
+$("letter").oninput=e=>{ S.letter=e.target.value; saveCfg(); render(); };
+$("bg1").oninput=e=>{ S.bg1=e.target.value; saveCfg(); render(); };
+$("bg2").oninput=e=>{ S.bg2=e.target.value; saveCfg(); render(); };
+$("sheen").onchange=e=>{ S.sheen=e.target.checked; saveCfg(); render(); };
+$("shadow").onchange=e=>{ S.shadow=e.target.checked; saveCfg(); render(); };
+$("pad").onchange=e=>{ S.pad=parseFloat(e.target.value); saveCfg(); render(); };
+$("width").onchange=e=>{ S.width=e.target.value; saveCfg(); render(); };
+
+$("pick").onclick=()=>$("file").click();
+$("file").onchange=e=>{ addFiles(e.target.files); e.target.value=""; };
+$("clear").onclick=()=>{ S.shots=[]; S.idx=0; setStatus(""); refreshShots(); render(); };
+$("saveOne").onclick=()=>exportShots([S.idx]);
+$("saveAll").onclick=()=>exportShots(S.shots.map((_,i)=>i));
+
+$("dockPick").onclick=()=>$("file").click();
+$("dockSave").onclick=()=>exportShots(S.shots.length>1 ? S.shots.map((_,i)=>i) : [S.idx]);
+$("sheetClose").onclick=closeResults;
+$("sheet").addEventListener("click",e=>{ if(e.target===$("sheet")) closeResults(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && !$("sheet").hidden) closeResults(); });
+
+const stage=$("stage");
+["dragenter","dragover"].forEach(t=>stage.addEventListener(t,e=>{e.preventDefault();stage.classList.add("drag");}));
+["dragleave","drop"].forEach(t=>stage.addEventListener(t,e=>{
+  if(t==="dragleave" && stage.contains(e.relatedTarget)) return;
+  stage.classList.remove("drag");
+}));
+stage.addEventListener("drop",e=>{ e.preventDefault(); if(e.dataTransfer) addFiles(e.dataTransfer.files); });
+document.addEventListener("paste",e=>{
+  const items=e.clipboardData&&e.clipboardData.files;
+  if(items&&items.length) addFiles(items);
+});
+
+refreshShots();
+render();
+downloads().then(d=>{
+  if(d) setStatus("저장할 때 장마다 확인창이 뜹니다. 많은 장수는 내려받은 HTML 파일로 여는 편이 빠릅니다.");
+});
+</script>
+
+</html>
