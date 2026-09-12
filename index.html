@@ -445,10 +445,9 @@ function phone(o){
 
 /* 해상도 한 개짜리 기기용 */
 const one = (w,h) => [{id:"native", label:`${h} × ${w}`, w, h}];
-/* S26+·울트라는 QHD+ 패널이지만 출고 설정이 FHD+ 라서 FHD+ 를 먼저 둡니다 */
 const galaxyQHD = [
-  {id:"fhd", label:"FHD+ 2340 × 1080 (기본)", w:1080,h:2340},
   {id:"qhd", label:"QHD+ 3120 × 1440", w:1440,h:3120},
+  {id:"fhd", label:"FHD+ 2340 × 1080", w:1080,h:2340},
   {id:"hd",  label:"HD+ 1560 × 720",   w:720, h:1560}
 ];
 
@@ -673,9 +672,14 @@ ${sheen?`<g clip-path="url(#scr)"><rect x="${sc.x}" y="${sc.y}" width="${sc.w}" 
 }
 
 /* ── 상태 ─────────────────────────────────────────────────────── */
+/* 브랜드별 기본값. 처음 열 때(아이폰)와 그 브랜드를 처음 고를 때 씁니다 */
+const DEFAULTS = {
+  apple:  {dev:"ip17pm", color:"cosmic-orange", mode:"native"},
+  samsung:{dev:"s26u",   color:"white",         mode:"qhd"}
+};
 const S = {
-  dev:"ip18pm", color:"burgundy", mode:"native",
-  last:{apple:"ip18pm", samsung:"s26u"},           // 브랜드를 오갈 때 마지막으로 고른 모델
+  ...DEFAULTS.apple,
+  last:{},                                         // 브랜드별 마지막 선택 {dev,color,mode}
   fit:"cover", letter:"#000000", sheen:false,
   bg:"none", bg1:"#FFFFFF", bg2:"#DCE6F0", pad:0.06, shadow:true,
   width:"900", shots:[], idx:0
@@ -687,20 +691,20 @@ const mode = () => dev().modes.find(m=>m.id===S.mode) || dev().modes[0];
 
 /* ── 설정 저장 ─────────────────────────────────────────────────── */
 const KEYS=["dev","last","color","mode","fit","letter","sheen","bg","bg1","bg2","pad","shadow","width"];
-function saveCfg(){ try{ const o={}; KEYS.forEach(k=>o[k]=S[k]); localStorage.setItem("phone-mockup",JSON.stringify(o)); }catch(e){} }
+function saveCfg(){ S.last[dev().brand]={dev:S.dev, color:S.color, mode:S.mode}; try{ const o={}; KEYS.forEach(k=>o[k]=S[k]); localStorage.setItem("phone-mockup",JSON.stringify(o)); }catch(e){} }
 function loadCfg(){
   try{
     const o=JSON.parse(localStorage.getItem("phone-mockup")||"{}");
     KEYS.forEach(k=>{ if(o[k]!==undefined) S[k]=o[k]; });
-    if(!DEVICES[S.dev]) S.dev="ip18pm";
-    if(!S.last || typeof S.last!=="object") S.last={};
-    ["apple","samsung"].forEach(b=>{
-      if(!DEVICES[S.last[b]] || DEVICES[S.last[b]].brand!==b)
-        S.last[b]=Object.keys(DEVICES).find(id=>DEVICES[id].brand===b);
+    if(!DEVICES[S.dev]) Object.assign(S, DEFAULTS.apple);
+    // last 는 브랜드별 {dev,color,mode}. 2026-09-12 첫 배포본은 모델 id 문자열만 저장했음
+    const L=(S.last && typeof S.last==="object") ? S.last : {};
+    S.last={};
+    Object.keys(DEFAULTS).forEach(b=>{
+      const v=typeof L[b]==="string" ? {dev:L[b]} : L[b];
+      S.last[b]=(v && DEVICES[v.dev] && DEVICES[v.dev].brand===b) ? {...DEFAULTS[b], ...v} : {...DEFAULTS[b]};
     });
-    S.last[dev().brand]=S.dev;
-    if(!dev().colors.some(c=>c.id===S.color)) S.color=dev().colors[0].id;
-    if(!dev().modes.some(m=>m.id===S.mode)) S.mode=dev().modes[0].id;
+    fixDevice();
   }catch(e){}
 }
 
@@ -1021,13 +1025,18 @@ function buildDevice(){
   });
   sel.value=S.dev;
 }
-function setDevice(id){
-  S.dev=id; S.last[dev().brand]=id;
-  // 같은 이름의 색(실버·블랙 등)은 기기를 바꿔도 유지합니다
-  if(!dev().colors.some(c=>c.id===S.color)) S.color=dev().colors[0].id;
-  if(!dev().modes.some(m=>m.id===S.mode)) S.mode=dev().modes[0].id;
-  buildDevice(); buildSwatches(); buildModes(); saveCfg(); render();
+/* 기기에 없는 색·해상도는 브랜드 기본값으로, 그것도 없으면 첫 번째로 맞춥니다.
+   같은 이름의 색(실버·블랙·화이트 등)은 기기를 바꿔도 유지됩니다. */
+function fixDevice(){
+  const d=dev(), want=DEFAULTS[d.brand];
+  const hasC=id=>d.colors.some(c=>c.id===id), hasM=id=>d.modes.some(m=>m.id===id);
+  if(!hasC(S.color)) S.color=hasC(want.color) ? want.color : d.colors[0].id;
+  if(!hasM(S.mode))  S.mode =hasM(want.mode)  ? want.mode  : d.modes[0].id;
 }
+function applyDevice(){ fixDevice(); buildDevice(); buildSwatches(); buildModes(); saveCfg(); render(); }
+function setDevice(id){ S.dev=id; applyDevice(); }
+/* 브랜드를 바꾸면 그 브랜드에서 마지막으로 쓴 모델·색·해상도로 돌아갑니다 */
+function setBrand(b){ Object.assign(S, S.last[b]||DEFAULTS[b]); applyDevice(); }
 function buildSwatches(){
   const g=$("swatches"); g.textContent="";
   dev().colors.forEach(c=>{
@@ -1071,7 +1080,7 @@ function syncBg(){
 /* ── 초기화 ───────────────────────────────────────────────────── */
 loadCfg();
 buildDevice(); buildSwatches(); buildModes();
-[...$("brandSeg").children].forEach(b=>{ b.onclick=()=>{ if(b.dataset.v!==dev().brand) setDevice(S.last[b.dataset.v]); }; });
+[...$("brandSeg").children].forEach(b=>{ b.onclick=()=>{ if(b.dataset.v!==dev().brand) setBrand(b.dataset.v); }; });
 $("model").onchange=e=>setDevice(e.target.value);
 bindSeg("fitSeg","fit"); bindSeg("bgSeg","bg",syncBg); syncBg();
 
