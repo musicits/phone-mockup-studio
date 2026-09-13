@@ -381,6 +381,10 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--main);cursor:poin
         <label for="sheen">화면 유리 반사</label>
         <input type="checkbox" id="sheen">
       </div>
+      <div class="row" id="islandRow">
+        <label for="island">다이내믹 아일랜드</label>
+        <input type="checkbox" id="island" checked>
+      </div>
       <div class="note" id="aspectNote" hidden>
         <span>이 스크린샷은 기기 화면 비율과 다릅니다. <b id="aspectDetail"></b></span>
       </div>
@@ -682,7 +686,7 @@ const PALETTES = {
 Object.values(DEVICES).forEach(d=>{ if(typeof d.colors==="string") d.colors=PALETTES[d.colors]; });
 
 /* ── 프레임 그리기 ──────────────────────────────────────────────── */
-/* own — 스크린샷에 아일랜드가 이미 찍혀 있으면(islandInShot) 프레임 쪽 아일랜드는 그리지 않습니다 */
+/* own — 참이면 프레임 쪽 아일랜드를 그리지 않습니다(다이내믹 아일랜드를 껐거나, 스크린샷에 이미 찍혀 있을 때) */
 function frameSVG(d,c,sheen,own){
   const bd=d.body, sc=d.screen, vb=d.vb, cx=bd.w/2;
   const home=d.cut.type==="home";
@@ -766,7 +770,7 @@ const DEFAULTS = {
 const S = {
   ...DEFAULTS.apple,
   last:{},                                         // 브랜드별 마지막 선택 {dev,color,mode}
-  fit:"cover", letter:"#000000", sheen:false,
+  fit:"cover", letter:"#000000", sheen:false, island:true,
   bg:"none", bg1:"#FFFFFF", bg2:"#DCE6F0", pad:0.06, shadow:true,
   width:"900", shots:[], idx:0
 };
@@ -776,7 +780,7 @@ const color = () => dev().colors.find(c=>c.id===S.color) || dev().colors[0];
 const mode = () => dev().modes.find(m=>m.id===S.mode) || dev().modes[0];
 
 /* ── 설정 저장 ─────────────────────────────────────────────────── */
-const KEYS=["dev","last","color","mode","fit","letter","sheen","bg","bg1","bg2","pad","shadow","width"];
+const KEYS=["dev","last","color","mode","fit","letter","sheen","island","bg","bg1","bg2","pad","shadow","width"];
 function saveCfg(){ S.last[dev().brand]={dev:S.dev, color:S.color, mode:S.mode}; try{ const o={}; KEYS.forEach(k=>o[k]=S[k]); localStorage.setItem("phone-mockup",JSON.stringify(o)); }catch(e){} }
 function loadCfg(){
   try{
@@ -904,8 +908,8 @@ async function compose(canvas, shotImg, out){
     ctx.fillStyle="#0B0D10"; ctx.fill(); ctx.restore();
   }
 
-  // 4. 프레임 덮기 (스크린샷에 아일랜드가 이미 있으면 프레임 쪽 것은 뺀다)
-  const own = !!shotImg && d.cut.type==="island" && islandInShot(ctx, ox, oy, k, d);
+  // 4. 프레임 덮기. 아일랜드를 껐으면 빼고, 켰어도 스크린샷에 이미 있으면 뺀다
+  const own = d.cut.type==="island" && (!S.island || (!!shotImg && islandInShot(ctx, ox, oy, k, d)));
   const f=await frameImage(own);
   ctx.drawImage(f, ox+U(d.vb.x), oy+U(d.vb.y), U(d.vb.w), U(d.vb.h));
 }
@@ -1161,6 +1165,7 @@ function buildModes(){
   });
   sel.value=S.mode;
   $("resRow").hidden = d.modes.length<2;
+  $("islandRow").hidden = d.cut.type!=="island";   // 아일랜드가 있는 아이폰에서만
   $("devSpec").textContent = `권장 스크린샷 ${mode().w} × ${mode().h} px` +
     (d.modes.length>1 ? " · 기기 설정의 화면 해상도와 맞추세요" : "");
 }
@@ -1189,7 +1194,7 @@ $("model").onchange=e=>setDevice(e.target.value);
 bindSeg("fitSeg","fit"); bindSeg("bgSeg","bg",syncBg); syncBg();
 
 $("letter").value=S.letter; $("bg1").value=S.bg1; $("bg2").value=S.bg2;
-$("sheen").checked=S.sheen; $("shadow").checked=S.shadow;
+$("sheen").checked=S.sheen; $("shadow").checked=S.shadow; $("island").checked=S.island;
 $("pad").value=String(S.pad); $("width").value=S.width;
 
 $("res").onchange=e=>{ S.mode=e.target.value; buildModes(); saveCfg(); render(); };
@@ -1197,6 +1202,7 @@ $("letter").oninput=e=>{ S.letter=e.target.value; saveCfg(); render(); };
 $("bg1").oninput=e=>{ S.bg1=e.target.value; saveCfg(); render(); };
 $("bg2").oninput=e=>{ S.bg2=e.target.value; saveCfg(); render(); };
 $("sheen").onchange=e=>{ S.sheen=e.target.checked; saveCfg(); render(); };
+$("island").onchange=e=>{ S.island=e.target.checked; saveCfg(); render(); };
 $("shadow").onchange=e=>{ S.shadow=e.target.checked; saveCfg(); render(); };
 $("pad").onchange=e=>{ S.pad=parseFloat(e.target.value); saveCfg(); render(); };
 $("width").onchange=e=>{ S.width=e.target.value; saveCfg(); render(); };
