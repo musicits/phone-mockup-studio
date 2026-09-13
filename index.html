@@ -11,62 +11,63 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
-/* ── 블로그 분석실(lab.musicits.com) ver. 02 리퀴드 글래스와 같은 색·재질·글꼴 ─────────
-   토큰 값은 분석실 레퍼런스UI.py 의 :root 를 그대로 옮겼습니다. 한쪽을 바꾸면 같이 바꾸세요.
+/* ── 재질·글꼴은 블로그 분석실(lab.musicits.com) ver. 02 리퀴드 글래스와 같고, 색은 퍼플입니다 ──
+   유리 토큰의 구성(--glass-*)은 분석실 레퍼런스UI.py 의 :root 와 같습니다. 색은 2026-09-14
+   퍼플·에메랄드를 나란히 비교한 뒤 퍼플로 정했습니다(분석실 앰버보다 밝게).
    분석실은 PC 에 깔린 Pretendard 를 쓰지만, 이 도구는 휴대폰에서도 열어서 웹폰트로 받습니다.
    흐림(backdrop-filter)은 머리말·카드·하단 바처럼 몇 개 안 되는 큰 면에만 겁니다. */
 :root{
-  --main:#B07E38; --main-deep:#8A5F27; --gold:#E0A44E; --cyan:#2E93AD;
-  --canvas:#ffffff; --surface:#F7F3EC; --surface-soft:#FBF8F3;
-  --line:#E6DFD3; --line-strong:#CDBFA8;
-  --ink:#1B1714; --slate:#5C5045; --steel:#7A6B58; --stone-solid:#A89881;
+  --main:#7B5CF0; --main-deep:#5A3ED1; --gold:#B79CFF; --cyan:#6FC3FF;
+  --canvas:#ffffff; --surface:#F3F0FB; --surface-soft:#FAF9FE;
+  --line:#E6E1F3; --line-strong:#CBC3E3;
+  --ink:#1B1728; --slate:#4E4766; --steel:#6E6787; --stone-solid:#A39CBB;
   --warn:#C77A1F;
   --r-sm:6px; --r-md:8px; --r-lg:12px; --r-outer:18px;
   --glass: saturate(180%) blur(20px);
-  --glass-face: rgba(251,248,243,.72);
-  --glass-face-2: rgba(251,248,243,.58);
-  --glass-hairline: rgba(74,50,18,.10);
+  --glass-face: rgba(250,249,254,.72);
+  --glass-face-2: rgba(250,249,254,.58);
+  --glass-hairline: rgba(50,30,110,.10);
   --glass-rim: inset 0 1px 0 rgba(255,255,255,.75);
   --glass-sheen: rgba(255,255,255,.55);
-  --glass-drop: 0 24px 48px -28px rgba(74,50,18,.38), 0 2px 8px -4px rgba(74,50,18,.10);
-  --focus: 0 0 0 3px rgba(176,126,56,.32);
-  --sel-bg:#F3E4C9; --sel-fg:#1B1714;
-  --checkA: rgba(74,50,18,.07);
+  --glass-drop: 0 24px 48px -28px rgba(50,30,110,.34), 0 2px 8px -4px rgba(50,30,110,.10);
+  --focus: 0 0 0 3px rgba(123,92,240,.32);
+  --sel-bg:#E6DDFF; --sel-fg:#1B1728;
+  --checkA: rgba(50,30,110,.06);
   color-scheme: light;
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
-    --main:#E0A44E; --main-deep:#F0C07A; --gold:#F7CE85; --cyan:#5CB8D0;
-    --canvas:#1E1A16; --surface:#262019; --surface-soft:#141110;
-    --line:#332C24; --line-strong:#4A3F33;
-    --ink:#F1EADE; --slate:#C0B3A1; --steel:#A0917C; --stone-solid:#7E7160;
+    --main:#A58CFF; --main-deep:#C9B8FF; --gold:#8E6CFF; --cyan:#4FA8E8;
+    --canvas:#1A1726; --surface:#221E31; --surface-soft:#100E18;
+    --line:#2E2942; --line-strong:#443D5E;
+    --ink:#EFEBFA; --slate:#BEB6D8; --steel:#9A92B6; --stone-solid:#6F6889;
     --warn:#E8963C;
-    --glass-face: rgba(28,24,20,.72);
-    --glass-face-2: rgba(28,24,20,.58);
+    --glass-face: rgba(24,21,36,.72);
+    --glass-face-2: rgba(24,21,36,.58);
     --glass-hairline: rgba(255,255,255,.10);
     --glass-rim: inset 0 1px 0 rgba(255,255,255,.10);
     --glass-sheen: rgba(255,255,255,.06);
     --glass-drop: 0 24px 48px -28px rgba(0,0,0,.7), 0 2px 8px -4px rgba(0,0,0,.4);
-    --focus: 0 0 0 3px rgba(224,164,78,.38);
-    --sel-bg:#4A3A1E; --sel-fg:#F7EFE2;
+    --focus: 0 0 0 3px rgba(165,140,255,.38);
+    --sel-bg:#3A2F66; --sel-fg:#F3EFFF;
     --checkA: rgba(255,255,255,.05);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"]{
-  --main:#E0A44E; --main-deep:#F0C07A; --gold:#F7CE85; --cyan:#5CB8D0;
-  --canvas:#1E1A16; --surface:#262019; --surface-soft:#141110;
-  --line:#332C24; --line-strong:#4A3F33;
-  --ink:#F1EADE; --slate:#C0B3A1; --steel:#A0917C; --stone-solid:#7E7160;
+  --main:#A58CFF; --main-deep:#C9B8FF; --gold:#8E6CFF; --cyan:#4FA8E8;
+  --canvas:#1A1726; --surface:#221E31; --surface-soft:#100E18;
+  --line:#2E2942; --line-strong:#443D5E;
+  --ink:#EFEBFA; --slate:#BEB6D8; --steel:#9A92B6; --stone-solid:#6F6889;
   --warn:#E8963C;
-  --glass-face: rgba(28,24,20,.72);
-  --glass-face-2: rgba(28,24,20,.58);
+  --glass-face: rgba(24,21,36,.72);
+  --glass-face-2: rgba(24,21,36,.58);
   --glass-hairline: rgba(255,255,255,.10);
   --glass-rim: inset 0 1px 0 rgba(255,255,255,.10);
   --glass-sheen: rgba(255,255,255,.06);
   --glass-drop: 0 24px 48px -28px rgba(0,0,0,.7), 0 2px 8px -4px rgba(0,0,0,.4);
-  --focus: 0 0 0 3px rgba(224,164,78,.38);
-  --sel-bg:#4A3A1E; --sel-fg:#F7EFE2;
+  --focus: 0 0 0 3px rgba(165,140,255,.38);
+  --sel-bg:#3A2F66; --sel-fg:#F3EFFF;
   --checkA: rgba(255,255,255,.05);
   color-scheme: dark;
 }
@@ -154,7 +155,7 @@ header p{margin:0;color:var(--steel);font-size:12.5px}
   display:flex; gap:8px; overflow-x:auto; max-width:100%; padding:8px;
   background:var(--glass-face); -webkit-backdrop-filter:var(--glass); backdrop-filter:var(--glass);
   border:1px solid var(--glass-hairline); border-radius:14px;
-  box-shadow:var(--glass-rim), 0 10px 22px -16px rgba(74,50,18,.32);
+  box-shadow:var(--glass-rim), 0 10px 22px -16px rgba(50,30,110,.32);
 }
 .strip:empty{display:none}
 .thumb{
@@ -186,7 +187,7 @@ button,select,input[type=text]{font:inherit;color:inherit}
   padding:9px 14px; border:1px solid var(--glass-hairline); border-radius:var(--r-md);
   font-weight:500; color:var(--ink); cursor:pointer;
   background:linear-gradient(180deg,color-mix(in srgb,var(--canvas) 90%,transparent),color-mix(in srgb,var(--canvas) 62%,transparent));
-  box-shadow:var(--glass-rim), 0 1px 3px rgba(74,50,18,.08);
+  box-shadow:var(--glass-rim), 0 1px 3px rgba(50,30,110,.08);
   transition:background .16s ease,border-color .16s ease;
 }
 .btn:hover{background:var(--canvas);border-color:var(--line-strong)}
@@ -254,7 +255,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--main);cursor:poin
 
 /* ---- 완성본 미리보기 시트 ---- */
 .sheet{position:fixed; inset:0; z-index:60; display:flex; align-items:flex-end; justify-content:center;
-  background:rgba(20,17,16,.34); -webkit-backdrop-filter:blur(3px) saturate(120%); backdrop-filter:blur(3px) saturate(120%)}
+  background:rgba(18,14,30,.34); -webkit-backdrop-filter:blur(3px) saturate(120%); backdrop-filter:blur(3px) saturate(120%)}
 .sheet[hidden]{display:none}
 .sheetbox{
   width:min(100%,640px); max-height:88dvh; display:flex; flex-direction:column;
