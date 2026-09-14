@@ -210,7 +210,9 @@ header p{margin:0;color:var(--steel);font-size:12.5px}
   display:flex; align-items:center; justify-content:space-between; gap:8px}
 .row{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:9px}
 .row label{color:var(--slate)}
-.hint{margin:8px 0 0; font-size:12px; color:var(--steel); line-height:1.55}
+.hint{margin:8px 0 0; font-size:12px; color:var(--steel); line-height:1.55; word-break:keep-all}   /* 단어 중간에서 안 끊기게 */
+.speclist{padding-left:16px}
+.speclist li::marker{color:var(--stone-solid)}
 
 button,select,input[type=text]{font:inherit;color:inherit}
 .btn{
@@ -405,7 +407,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--main);cursor:poin
         <label for="res">화면 해상도</label>
         <select id="res"></select>
       </div>
-      <p class="hint" id="devSpec"></p>
+      <ul class="hint speclist" id="devSpec"></ul>
     </div>
 
     <div class="grp">
@@ -1299,8 +1301,10 @@ function buildModes(){
   sel.value=S.mode;
   $("resRow").hidden = d.modes.length<2;
   $("islandRow").hidden = d.cut.type!=="island";   // 아일랜드가 있는 아이폰에서만
-  $("devSpec").textContent = `권장 스크린샷 ${mode().w} × ${mode().h} px` +
-    (d.modes.length>1 ? " · 기기 설정의 화면 해상도와 맞추세요" : "");
+  // 한 줄에 이어 붙이면 좁은 설정판에서 '맞 / 추세요' 처럼 끊겨 두 줄 목록으로 나눈다
+  const spec=$("devSpec"); spec.textContent="";
+  [`권장 스크린샷 ${mode().w} × ${mode().h} px`, ...(d.modes.length>1 ? ["기기 설정의 화면 해상도와 맞추세요"] : [])]
+    .forEach(t=>{ const li=document.createElement("li"); li.textContent=t; spec.appendChild(li); });
 }
 function bindSeg(id,key,after){
   const seg=$(id);
