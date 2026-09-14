@@ -212,6 +212,21 @@ header p{margin:0;color:var(--steel);font-size:12.5px}
 .row label{color:var(--slate)}
 .hint{margin:8px 0 0; font-size:12px; color:var(--steel); line-height:1.55; word-break:keep-all}   /* 단어 중간에서 안 끊기게 */
 .speclist{padding-left:16px}
+/* 기기 검색 — 결과는 입력칸 아래 유리 목록 */
+.dsearch{position:relative;margin-bottom:10px}
+#devQ{width:100%;padding:9px 12px 9px 34px;border:1px solid var(--line-strong);border-radius:var(--r-md);
+  font:inherit;font-size:14px;color:var(--ink);-webkit-appearance:none;appearance:none;
+  background:color-mix(in srgb,var(--canvas) 78%,transparent) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239A92B6' stroke-width='2.2' stroke-linecap='round'><circle cx='11' cy='11' r='6.5'/><path d='M20 20l-4.2-4.2'/></svg>") no-repeat 11px 50%/16px}
+#devQ::placeholder{color:var(--stone-solid)}
+.dhits{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:25;max-height:300px;overflow-y:auto;padding:4px;
+  border-radius:12px;border:1px solid var(--glass-hairline);box-shadow:var(--glass-rim),var(--glass-drop);
+  background:color-mix(in srgb,var(--canvas) 94%,transparent);-webkit-backdrop-filter:var(--glass);backdrop-filter:var(--glass)}
+.dhit{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;padding:9px 10px;border:0;border-radius:8px;
+  background:none;cursor:pointer;text-align:left;font:inherit;font-size:14px;color:var(--ink)}
+.dhit small{color:var(--steel);font-size:12px;flex:0 0 auto}
+.dhit[aria-selected="true"],.dhit:hover{background:color-mix(in srgb,var(--main) 13%,transparent)}
+.dnone{padding:10px;color:var(--steel);font-size:13px}
+@media (max-width:900px){ #devQ{font-size:16px;min-height:44px} }   /* 16px 밑이면 아이폰이 입력할 때 화면을 확대한다 */
 .speclist li::marker{color:var(--stone-solid)}
 
 button,select,input[type=text]{font:inherit;color:inherit}
@@ -395,6 +410,11 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--main);cursor:poin
 
     <div class="grp">
       <h2>기기<button class="qbtn" type="button" data-help="0" aria-label="기기·스크린샷 도움말" title="어떤 스크린샷을 넣나요?">?</button></h2>
+      <div class="dsearch">
+        <input type="search" id="devQ" placeholder="기기 검색 — s24 울트라, 17 프로맥스" autocomplete="off"
+          enterkeyhint="search" aria-label="기기 검색" aria-controls="devHits">
+        <div class="dhits" id="devHits" role="listbox" hidden></div>
+      </div>
       <div class="seg" id="brandSeg">
         <button type="button" data-v="apple">아이폰</button>
         <button type="button" data-v="samsung">갤럭시</button>
@@ -402,6 +422,14 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--main);cursor:poin
       <div class="row">
         <label for="model">모델</label>
         <select id="model"></select>
+      </div>
+      <div class="row" id="foldRow" hidden>
+        <label>화면</label>
+        <div class="seg" id="foldSeg" style="flex:0 1 230px">
+          <button type="button" data-v="auto">자동</button>
+          <button type="button" data-v="main" id="foldMain">커버</button>
+          <button type="button" data-v="alt" id="foldAlt">안쪽</button>
+        </div>
       </div>
       <div class="row" id="resRow">
         <label for="res">화면 해상도</label>
@@ -544,6 +572,13 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--main);cursor:poin
         </div>
       </details>
       <details>
+        <summary>폴드·플립은 화면을 어떻게 고르나요?</summary>
+        <div class="ans">
+          <p>[기기] › 화면을 <b>자동</b>으로 두면 스크린샷 비율로 고릅니다. 폴드는 길쭉하면 <b>커버</b>, 정사각형에 가깝거나 가로로 넓으면 <b>안쪽</b>(펼친 화면)이고, 플립은 길쭉하면 <b>펼침</b>, 정사각형에 가까우면 앞면 <b>커버</b>입니다.</p>
+          <p>여러 장을 섞어 넣어도 한 장씩 따로 고릅니다. 잘못 고르면 옆의 단추로 직접 고르세요.</p>
+        </div>
+      </details>
+      <details>
         <summary>아래 테두리의 로고는 무엇인가요?</summary>
         <div class="ans">
           <p>이 도구를 만든 <b>music ITs</b>의 사인입니다. 모든 저장본의 아래 테두리 가운데에 작게 들어갑니다.</p>
@@ -633,6 +668,12 @@ function phone(o){
 
 /* 해상도 한 개짜리 기기용 */
 const one = (w,h) => [{id:"native", label:`${h} × ${w}`, w, h}];
+/* S23 울트라는 세로가 3088 입니다(S24 부터 3120) */
+const galaxyQHD3088 = [
+  {id:"qhd", label:"QHD+ 3088 × 1440", w:1440,h:3088},
+  {id:"fhd", label:"FHD+ 2316 × 1080", w:1080,h:2316},
+  {id:"hd",  label:"HD+ 1544 × 720",   w:720, h:1544}
+];
 const galaxyQHD = [
   {id:"qhd", label:"QHD+ 3120 × 1440", w:1440,h:3120},
   {id:"fhd", label:"FHD+ 2340 × 1080", w:1080,h:2340},
@@ -651,31 +692,31 @@ const col = (id,name,mid,dk,hi,lo,btn,extra) => ({id,name,mid,dk,hi,lo,btn,...ex
 const DEVICES = {
   /* ── 아이폰 ── */
   ip18pm: phone({
-    brand:"apple", name:"iPhone 18 Pro Max", slug:"iphone18promax",
+    brand:"apple", name:"iPhone 18 Pro Max", series:"iPhone 18", slug:"iphone18promax",
     mm:[78.0,163.4], diag:6.86, r:118, modes:one(1320,2868),
     cut:{type:"island", w:168, h:62, top:18}, btn:BTN_PRO, ant:[.16,.84],
     colors:"18pro"
   }),
   ip18p: phone({
-    brand:"apple", name:"iPhone 18 Pro", slug:"iphone18pro",
+    brand:"apple", name:"iPhone 18 Pro", series:"iPhone 18", slug:"iphone18pro",
     mm:[71.9,150.0], diag:6.27, r:112, modes:one(1206,2622),
     cut:{type:"island", w:168, h:62, top:18}, btn:BTN_PRO, ant:[.16,.84],
     colors:"18pro"
   }),
   ip17pm: phone({
-    brand:"apple", name:"iPhone 17 Pro Max", slug:"iphone17promax",
+    brand:"apple", name:"iPhone 17 Pro Max", series:"iPhone 17", slug:"iphone17promax",
     mm:[78.0,163.4], diag:6.86, r:118, modes:one(1320,2868),
     cut:{type:"island", w:209, h:62, top:18}, btn:BTN_PRO, ant:[.16,.84],
     colors:"17pro"
   }),
   ip17p: phone({
-    brand:"apple", name:"iPhone 17 Pro", slug:"iphone17pro",
+    brand:"apple", name:"iPhone 17 Pro", series:"iPhone 17", slug:"iphone17pro",
     mm:[71.9,150.0], diag:6.27, r:112, modes:one(1206,2622),
     cut:{type:"island", w:209, h:62, top:18}, btn:BTN_PRO, ant:[.16,.84],
     colors:"17pro"
   }),
   ipair: phone({
-    brand:"apple", name:"iPhone Air", slug:"iphoneair",
+    brand:"apple", name:"iPhone Air", series:"iPhone 17", slug:"iphoneair",
     mm:[74.7,156.2], diag:6.55, r:116, modes:one(1260,2736),
     cut:{type:"island", w:209, h:62, top:18}, btn:BTN_PRO, ant:[.16,.84],
     colors:[
@@ -686,7 +727,7 @@ const DEVICES = {
     ]
   }),
   ip17: phone({
-    brand:"apple", name:"iPhone 17", slug:"iphone17",
+    brand:"apple", name:"iPhone 17", series:"iPhone 17", slug:"iphone17",
     mm:[71.5,149.6], diag:6.27, r:110, modes:one(1206,2622),
     cut:{type:"island", w:209, h:62, top:18}, btn:BTN_PRO, ant:[.16,.84],
     colors:[
@@ -698,7 +739,7 @@ const DEVICES = {
     ]
   }),
   ip17e: phone({
-    brand:"apple", name:"iPhone 17e", slug:"iphone17e",
+    brand:"apple", name:"iPhone 17e", series:"iPhone 17", slug:"iphone17e",
     mm:[71.5,146.7], diag:6.06, r:104, modes:one(1170,2532),
     cut:{type:"notch", w:268, h:53}, rail:20, btn:BTN_NOCC, ant:[.16,.84],
     colors:[
@@ -707,8 +748,208 @@ const DEVICES = {
       col("black",    "블랙",      "#2B2C2E","#1D1E20","#7C7F84","#0E0F10","#232426")
     ]
   }),
+  /* ── 아이폰 16·15·14·13 — 본체 mm·해상도는 애플 공식 사양, 대각선은 모서리를 사각형으로 잰 값 ── */
+  ip16pm: phone({
+    brand:"apple", name:"iPhone 16 Pro Max", series:"iPhone 16", slug:"iphone16promax",
+    mm:[77.6,163.0], diag:6.86, r:118, modes:one(1320,2868),
+    cut:{type:"island", w:209, h:62, top:18}, btn:BTN_PRO, ant:[.16,.84],
+    colors:[
+      col("black-titanium","블랙 티타늄","#3B3B3C","#303031","#B5B5B5","#1C1C1D","#363637"),
+      col("white-titanium","화이트 티타늄","#E9E7E2","#BFBDB9","#F7F6F4","#706F6C","#D6D5D0"),
+      col("natural-titanium","내추럴 티타늄","#BDB7AC","#9B968D","#E6E4DF","#5B5853","#AEA89E"),
+      col("desert-titanium","데저트 티타늄","#C2A994","#9F8B79","#E8DED6","#5D5147","#B29B88")
+    ]
+  }),
+  ip16p: phone({
+    brand:"apple", name:"iPhone 16 Pro", series:"iPhone 16", slug:"iphone16pro",
+    mm:[71.5,149.6], diag:6.27, r:112, modes:one(1206,2622),
+    cut:{type:"island", w:209, h:62, top:18}, btn:BTN_PRO, ant:[.16,.84],
+    colors:[
+      col("black-titanium","블랙 티타늄","#3B3B3C","#303031","#B5B5B5","#1C1C1D","#363637"),
+      col("white-titanium","화이트 티타늄","#E9E7E2","#BFBDB9","#F7F6F4","#706F6C","#D6D5D0"),
+      col("natural-titanium","내추럴 티타늄","#BDB7AC","#9B968D","#E6E4DF","#5B5853","#AEA89E"),
+      col("desert-titanium","데저트 티타늄","#C2A994","#9F8B79","#E8DED6","#5D5147","#B29B88")
+    ]
+  }),
+  ip16pl: phone({
+    brand:"apple", name:"iPhone 16 Plus", series:"iPhone 16", slug:"iphone16plus",
+    mm:[77.8,160.9], diag:6.69, r:114, modes:one(1290,2796),
+    cut:{type:"island", w:209, h:62, top:18}, btn:BTN_PRO, ant:[.16,.84],
+    colors:[
+      col("black","블랙","#3A3E40","#303334","#B4B6B6","#1C1E1F","#35393B"),
+      col("white","화이트","#ECECEA","#C2C2C0","#F8F8F7","#717170","#D9D9D7"),
+      col("pink","핑크","#EDB9CF","#C298AA","#F8E4ED","#725963","#DAAABE"),
+      col("teal","틸","#A9D0CD","#8BABA8","#DEEDEC","#516462","#9BBFBD"),
+      col("ultramarine","울트라마린","#8FA3F0","#7586C5","#D4DCF9","#454E73","#8496DD")
+    ]
+  }),
+  ip16: phone({
+    brand:"apple", name:"iPhone 16", series:"iPhone 16", slug:"iphone16",
+    mm:[71.6,147.6], diag:6.12, r:110, modes:one(1179,2556),
+    cut:{type:"island", w:209, h:62, top:18}, btn:BTN_PRO, ant:[.16,.84],
+    colors:[
+      col("black","블랙","#3A3E40","#303334","#B4B6B6","#1C1E1F","#35393B"),
+      col("white","화이트","#ECECEA","#C2C2C0","#F8F8F7","#717170","#D9D9D7"),
+      col("pink","핑크","#EDB9CF","#C298AA","#F8E4ED","#725963","#DAAABE"),
+      col("teal","틸","#A9D0CD","#8BABA8","#DEEDEC","#516462","#9BBFBD"),
+      col("ultramarine","울트라마린","#8FA3F0","#7586C5","#D4DCF9","#454E73","#8496DD")
+    ]
+  }),
+  ip16e: phone({
+    brand:"apple", name:"iPhone 16e", series:"iPhone 16", slug:"iphone16e",
+    mm:[71.5,146.7], diag:6.06, r:104, modes:one(1170,2532),
+    cut:{type:"notch", w:268, h:53}, rail:20, btn:BTN_NOCC, ant:[.16,.84],
+    colors:[
+      col("black","블랙","#2B2C2E","#232426","#AEAFB0","#151516","#28282A"),
+      col("white","화이트","#E9E9E7","#BFBFBD","#F7F7F6","#70706F","#D6D6D5")
+    ]
+  }),
+  ip15pm: phone({
+    brand:"apple", name:"iPhone 15 Pro Max", series:"iPhone 15", slug:"iphone15promax",
+    mm:[76.7,159.9], diag:6.69, r:114, modes:one(1290,2796),
+    cut:{type:"island", w:209, h:62, top:18}, btn:BTN_NOCC, ant:[.16,.84],
+    colors:[
+      col("black-titanium","블랙 티타늄","#3B3B3C","#303031","#B5B5B5","#1C1C1D","#363637"),
+      col("white-titanium","화이트 티타늄","#DCDCD8","#B4B4B1","#F2F2F0","#6A6A68","#CACAC7"),
+      col("blue-titanium","블루 티타늄","#34495A","#2B3C4A","#B2BAC0","#19232B","#304353"),
+      col("natural-titanium","내추럴 티타늄","#B6B0A5","#959087","#E3E1DD","#57544F","#A7A298")
+    ]
+  }),
+  ip15p: phone({
+    brand:"apple", name:"iPhone 15 Pro", series:"iPhone 15", slug:"iphone15pro",
+    mm:[70.6,146.6], diag:6.12, r:108, modes:one(1179,2556),
+    cut:{type:"island", w:209, h:62, top:18}, btn:BTN_NOCC, ant:[.16,.84],
+    colors:[
+      col("black-titanium","블랙 티타늄","#3B3B3C","#303031","#B5B5B5","#1C1C1D","#363637"),
+      col("white-titanium","화이트 티타늄","#DCDCD8","#B4B4B1","#F2F2F0","#6A6A68","#CACAC7"),
+      col("blue-titanium","블루 티타늄","#34495A","#2B3C4A","#B2BAC0","#19232B","#304353"),
+      col("natural-titanium","내추럴 티타늄","#B6B0A5","#959087","#E3E1DD","#57544F","#A7A298")
+    ]
+  }),
+  ip15pl: phone({
+    brand:"apple", name:"iPhone 15 Plus", series:"iPhone 15", slug:"iphone15plus",
+    mm:[77.8,160.9], diag:6.69, r:114, modes:one(1290,2796),
+    cut:{type:"island", w:209, h:62, top:18}, btn:BTN_NOCC, ant:[.16,.84],
+    colors:[
+      col("black","블랙","#383C3E","#2E3133","#B3B5B6","#1B1D1E","#343739"),
+      col("blue","블루","#CFD9DD","#AAB2B5","#EDF1F2","#63686A","#BEC8CB"),
+      col("green","그린","#C9D4C3","#A5AEA0","#EAEFE8","#60665E","#B9C3B3"),
+      col("yellow","옐로","#EDE5BE","#C2BC9C","#F8F5E6","#726E5B","#DAD3AF"),
+      col("pink","핑크","#E6C9CB","#BDA5A6","#F6EAEB","#6E6061","#D4B9BB")
+    ]
+  }),
+  ip15: phone({
+    brand:"apple", name:"iPhone 15", series:"iPhone 15", slug:"iphone15",
+    mm:[71.6,147.6], diag:6.12, r:110, modes:one(1179,2556),
+    cut:{type:"island", w:209, h:62, top:18}, btn:BTN_NOCC, ant:[.16,.84],
+    colors:[
+      col("black","블랙","#383C3E","#2E3133","#B3B5B6","#1B1D1E","#343739"),
+      col("blue","블루","#CFD9DD","#AAB2B5","#EDF1F2","#63686A","#BEC8CB"),
+      col("green","그린","#C9D4C3","#A5AEA0","#EAEFE8","#60665E","#B9C3B3"),
+      col("yellow","옐로","#EDE5BE","#C2BC9C","#F8F5E6","#726E5B","#DAD3AF"),
+      col("pink","핑크","#E6C9CB","#BDA5A6","#F6EAEB","#6E6061","#D4B9BB")
+    ]
+  }),
+  ip14pm: phone({
+    brand:"apple", name:"iPhone 14 Pro Max", series:"iPhone 14", slug:"iphone14promax",
+    mm:[77.6,160.7], diag:6.69, r:114, modes:one(1290,2796),
+    cut:{type:"island", w:209, h:62, top:18}, btn:BTN_NOCC, ant:[.16,.84],
+    colors:[
+      col("deep-purple","딥 퍼플","#5A4F66","#4A4154","#C0BCC5","#2B2631","#53495E"),
+      col("gold","골드","#EFE2C6","#C4B9A2","#F9F4E9","#736C5F","#DCD0B6"),
+      col("silver","실버","#E4E6E7","#BBBDBD","#F5F6F6","#6D6E6F","#D2D4D5"),
+      col("space-black","스페이스 블랙","#403E3D","#343332","#B6B6B5","#1F1E1D","#3B3938")
+    ]
+  }),
+  ip14p: phone({
+    brand:"apple", name:"iPhone 14 Pro", series:"iPhone 14", slug:"iphone14pro",
+    mm:[71.5,147.5], diag:6.12, r:108, modes:one(1179,2556),
+    cut:{type:"island", w:209, h:62, top:18}, btn:BTN_NOCC, ant:[.16,.84],
+    colors:[
+      col("deep-purple","딥 퍼플","#5A4F66","#4A4154","#C0BCC5","#2B2631","#53495E"),
+      col("gold","골드","#EFE2C6","#C4B9A2","#F9F4E9","#736C5F","#DCD0B6"),
+      col("silver","실버","#E4E6E7","#BBBDBD","#F5F6F6","#6D6E6F","#D2D4D5"),
+      col("space-black","스페이스 블랙","#403E3D","#343332","#B6B6B5","#1F1E1D","#3B3938")
+    ]
+  }),
+  ip14pl: phone({
+    brand:"apple", name:"iPhone 14 Plus", series:"iPhone 14", slug:"iphone14plus",
+    mm:[78.1,160.8], diag:6.68, r:112, modes:one(1284,2778),
+    cut:{type:"notch", w:268, h:53}, rail:20, btn:BTN_NOCC, ant:[.16,.84],
+    colors:[
+      col("midnight","미드나이트","#2E333B","#262A30","#B0B1B5","#16181C","#2A2F36"),
+      col("starlight","스타라이트","#E6DFD2","#BDB7AC","#F6F3EE","#6E6B65","#D4CDC1"),
+      col("blue","블루","#A8C0D8","#8A9DB1","#DEE7F0","#515C68","#9BB1C7"),
+      col("purple","퍼플","#DCD2E6","#B4ACBD","#F2EEF6","#6A656E","#CAC1D4"),
+      col("yellow","옐로","#F2E28A","#C6B971","#FAF4D3","#746C42","#DFD07F"),
+      col("red","(PRODUCT)RED","#B3122E","#930F26","#E2A5B0","#560916","#A5112A")
+    ]
+  }),
+  ip14: phone({
+    brand:"apple", name:"iPhone 14", series:"iPhone 14", slug:"iphone14",
+    mm:[71.5,146.7], diag:6.06, r:104, modes:one(1170,2532),
+    cut:{type:"notch", w:268, h:53}, rail:20, btn:BTN_NOCC, ant:[.16,.84],
+    colors:[
+      col("midnight","미드나이트","#2E333B","#262A30","#B0B1B5","#16181C","#2A2F36"),
+      col("starlight","스타라이트","#E6DFD2","#BDB7AC","#F6F3EE","#6E6B65","#D4CDC1"),
+      col("blue","블루","#A8C0D8","#8A9DB1","#DEE7F0","#515C68","#9BB1C7"),
+      col("purple","퍼플","#DCD2E6","#B4ACBD","#F2EEF6","#6A656E","#CAC1D4"),
+      col("yellow","옐로","#F2E28A","#C6B971","#FAF4D3","#746C42","#DFD07F"),
+      col("red","(PRODUCT)RED","#B3122E","#930F26","#E2A5B0","#560916","#A5112A")
+    ]
+  }),
+  ip13pm: phone({
+    brand:"apple", name:"iPhone 13 Pro Max", series:"iPhone 13", slug:"iphone13promax",
+    mm:[78.1,160.8], diag:6.68, r:112, modes:one(1284,2778),
+    cut:{type:"notch", w:268, h:53}, rail:20, btn:BTN_NOCC, ant:[.16,.84],
+    colors:[
+      col("graphite","그래파이트","#55534F","#464441","#BEBEBC","#292826","#4E4C49"),
+      col("gold","골드","#EBD9BD","#C1B29B","#F7F1E6","#71685B","#D8C8AE"),
+      col("silver","실버","#DFE1E3","#B7B8BA","#F3F4F4","#6B6C6D","#CDCFD1"),
+      col("sierra-blue","시에라 블루","#9CB6CF","#8095AA","#D9E3ED","#4B5763","#90A7BE"),
+      col("alpine-green","알파인 그린","#566855","#475546","#BFC6BE","#293229","#4F604E")
+    ]
+  }),
+  ip13p: phone({
+    brand:"apple", name:"iPhone 13 Pro", series:"iPhone 13", slug:"iphone13pro",
+    mm:[71.5,146.7], diag:6.06, r:104, modes:one(1170,2532),
+    cut:{type:"notch", w:268, h:53}, rail:20, btn:BTN_NOCC, ant:[.16,.84],
+    colors:[
+      col("graphite","그래파이트","#55534F","#464441","#BEBEBC","#292826","#4E4C49"),
+      col("gold","골드","#EBD9BD","#C1B29B","#F7F1E6","#71685B","#D8C8AE"),
+      col("silver","실버","#DFE1E3","#B7B8BA","#F3F4F4","#6B6C6D","#CDCFD1"),
+      col("sierra-blue","시에라 블루","#9CB6CF","#8095AA","#D9E3ED","#4B5763","#90A7BE"),
+      col("alpine-green","알파인 그린","#566855","#475546","#BFC6BE","#293229","#4F604E")
+    ]
+  }),
+  ip13: phone({
+    brand:"apple", name:"iPhone 13", series:"iPhone 13", slug:"iphone13",
+    mm:[71.5,146.7], diag:6.06, r:104, modes:one(1170,2532),
+    cut:{type:"notch", w:268, h:53}, rail:20, btn:BTN_NOCC, ant:[.16,.84],
+    colors:[
+      col("midnight","미드나이트","#2E333B","#262A30","#B0B1B5","#16181C","#2A2F36"),
+      col("starlight","스타라이트","#E6DFD2","#BDB7AC","#F6F3EE","#6E6B65","#D4CDC1"),
+      col("blue","블루","#3E5E80","#334D69","#B6C2CF","#1E2D3D","#395676"),
+      col("pink","핑크","#EFD2CD","#C4ACA8","#F9EEEC","#736562","#DCC1BD"),
+      col("green","그린","#3F5A48","#344A3B","#B6C0B9","#1E2B23","#3A5342"),
+      col("red","(PRODUCT)RED","#B3122E","#930F26","#E2A5B0","#560916","#A5112A")
+    ]
+  }),
+  ip13m: phone({
+    brand:"apple", name:"iPhone 13 mini", series:"iPhone 13", slug:"iphone13mini",
+    mm:[64.2,131.5], diag:5.42, r:96, modes:one(1080,2340),
+    cut:{type:"notch", w:268, h:53}, rail:20, btn:BTN_NOCC, ant:[.16,.84],
+    colors:[
+      col("midnight","미드나이트","#2E333B","#262A30","#B0B1B5","#16181C","#2A2F36"),
+      col("starlight","스타라이트","#E6DFD2","#BDB7AC","#F6F3EE","#6E6B65","#D4CDC1"),
+      col("blue","블루","#3E5E80","#334D69","#B6C2CF","#1E2D3D","#395676"),
+      col("pink","핑크","#EFD2CD","#C4ACA8","#F9EEEC","#736562","#DCC1BD"),
+      col("green","그린","#3F5A48","#344A3B","#B6C0B9","#1E2B23","#3A5342"),
+      col("red","(PRODUCT)RED","#B3122E","#930F26","#E2A5B0","#560916","#A5112A")
+    ]
+  }),
   ipse3: phone({
-    brand:"apple", name:"iPhone SE (3세대)", slug:"iphonese3",
+    brand:"apple", name:"iPhone SE (3세대)", series:"이전 모델", slug:"iphonese3",
     mm:[67.3,138.4], diag:4.7, r:96, sr:0, modes:one(750,1334),
     cut:{type:"home"}, rail:9, btn:BTN_HOME, ant:[.075,.925],
     colors:[
@@ -718,7 +959,7 @@ const DEVICES = {
     ]
   }),
   ip8p: phone({
-    brand:"apple", name:"iPhone 8 Plus", slug:"iphone8plus",
+    brand:"apple", name:"iPhone 8 Plus", series:"이전 모델", slug:"iphone8plus",
     mm:[78.1,158.4], diag:5.5, r:106, sr:0, modes:one(1242,2208),
     cut:{type:"home"}, rail:9, btn:BTN_HOME, ant:[.075,.925],
     colors:[
@@ -731,25 +972,25 @@ const DEVICES = {
 
   /* ── 갤럭시 ── */
   s26u: phone({
-    brand:"samsung", name:"Galaxy S26 Ultra", slug:"galaxys26ultra",
+    brand:"samsung", name:"Galaxy S26 Ultra", series:"S26 시리즈", slug:"galaxys26ultra",
     mm:[78.1,163.6], diag:6.886, r:84, modes:galaxyQHD,          // 174.9mm, S25 울트라보다 둥근 모서리
     cut:{type:"hole", d:38, top:44}, btn:BTN_GALAXY, seam:true,
     colors:"s26"
   }),
   s26p: phone({
-    brand:"samsung", name:"Galaxy S26+", slug:"galaxys26plus",
+    brand:"samsung", name:"Galaxy S26+", series:"S26 시리즈", slug:"galaxys26plus",
     mm:[75.8,158.4], diag:6.66, r:84, modes:galaxyQHD,           // 169.1mm
     cut:{type:"hole", d:36, top:42}, btn:BTN_GALAXY, seam:true,
     colors:"s26"
   }),
   s26: phone({
-    brand:"samsung", name:"Galaxy S26", slug:"galaxys26",
+    brand:"samsung", name:"Galaxy S26", series:"S26 시리즈", slug:"galaxys26",
     mm:[71.7,149.6], diag:6.27, r:84, modes:one(1080,2340),      // 159.3mm, FHD+ 전용
     cut:{type:"hole", d:36, top:41}, btn:BTN_GALAXY, seam:true,
     colors:"s26"
   }),
   s26fe: phone({
-    brand:"samsung", name:"Galaxy S26 FE", slug:"galaxys26fe",
+    brand:"samsung", name:"Galaxy S26 FE", series:"S26 시리즈", slug:"galaxys26fe",
     mm:[76.9,161.6], diag:6.736, r:100, modes:one(1080,2340),    // 171.1mm, 베젤이 조금 두껍고 모서리가 더 둥급니다
     cut:{type:"hole", d:38, top:44}, btn:BTN_GALAXY, seam:true,
     colors:[
@@ -757,6 +998,146 @@ const DEVICES = {
       col("graphite", "그라파이트","#4A4C50","#37393D","#9A9DA3","#1E2023","#404246"),
       col("pistachio","피스타치오","#C9D6B8","#AEBE9A","#EEF4E4","#7A8A66","#BCCAA9")
     ]
+  }),
+
+  /* ── 갤럭시 S25 시리즈 ── */
+  s25u: phone({
+    brand:"samsung", name:"Galaxy S25 Ultra", series:"S25 시리즈", slug:"galaxys25ultra",
+    mm:[77.6,162.8], diag:6.86, r:66, modes:galaxyQHD,           // S24 울트라보다 둥글고 S26 울트라보다 각짐
+    cut:{type:"hole", d:38, top:44}, btn:BTN_GALAXY, seam:true, colors:"s25u"
+  }),
+  s25p: phone({
+    brand:"samsung", name:"Galaxy S25+", series:"S25 시리즈", slug:"galaxys25plus",
+    mm:[75.8,158.4], diag:6.66, r:84, modes:galaxyQHD,
+    cut:{type:"hole", d:36, top:42}, btn:BTN_GALAXY, seam:true, colors:"s25"
+  }),
+  s25: phone({
+    brand:"samsung", name:"Galaxy S25", series:"S25 시리즈", slug:"galaxys25",
+    mm:[70.5,146.9], diag:6.17, r:84, modes:one(1080,2340),
+    cut:{type:"hole", d:36, top:41}, btn:BTN_GALAXY, seam:true, colors:"s25"
+  }),
+  s25e: phone({
+    brand:"samsung", name:"Galaxy S25 Edge", series:"S25 시리즈", slug:"galaxys25edge",
+    mm:[75.6,158.2], diag:6.66, r:84, modes:galaxyQHD,           // 5.8mm 두께의 얇은 모델
+    cut:{type:"hole", d:36, top:42}, btn:BTN_GALAXY, seam:true, colors:"s25edge"
+  }),
+  s25fe: phone({
+    brand:"samsung", name:"Galaxy S25 FE", series:"S25 시리즈", slug:"galaxys25fe",
+    mm:[76.6,161.3], diag:6.7, r:100, modes:one(1080,2340),
+    cut:{type:"hole", d:38, top:44}, btn:BTN_GALAXY, seam:true, colors:"s25fe"
+  }),
+
+  /* ── 갤럭시 S24 시리즈 ── */
+  s24u: phone({
+    brand:"samsung", name:"Galaxy S24 Ultra", series:"S24 시리즈", slug:"galaxys24ultra",
+    mm:[79.0,162.3], diag:6.8, r:44, modes:galaxyQHD,            // 평면 화면, 모서리가 가장 각진 울트라
+    cut:{type:"hole", d:38, top:44}, btn:BTN_GALAXY, seam:true, colors:"s24u"
+  }),
+  s24p: phone({
+    brand:"samsung", name:"Galaxy S24+", series:"S24 시리즈", slug:"galaxys24plus",
+    mm:[75.9,158.5], diag:6.7, r:88, modes:galaxyQHD,
+    cut:{type:"hole", d:36, top:42}, btn:BTN_GALAXY, seam:true, colors:"s24"
+  }),
+  s24: phone({
+    brand:"samsung", name:"Galaxy S24", series:"S24 시리즈", slug:"galaxys24",
+    mm:[70.6,147.0], diag:6.2, r:88, modes:one(1080,2340),
+    cut:{type:"hole", d:36, top:41}, btn:BTN_GALAXY, seam:true, colors:"s24"
+  }),
+  s24fe: phone({
+    brand:"samsung", name:"Galaxy S24 FE", series:"S24 시리즈", slug:"galaxys24fe",
+    mm:[77.3,162.0], diag:6.7, r:100, modes:one(1080,2340),
+    cut:{type:"hole", d:38, top:44}, btn:BTN_GALAXY, seam:true, colors:"s24fe"
+  }),
+
+  /* ── 갤럭시 S23 시리즈 ── */
+  s23u: phone({
+    brand:"samsung", name:"Galaxy S23 Ultra", series:"S23 시리즈", slug:"galaxys23ultra",
+    mm:[78.1,163.4], diag:6.8, r:40, modes:galaxyQHD3088,        // 양옆이 휜 엣지 화면, 각진 모서리
+    cut:{type:"hole", d:38, top:44}, btn:BTN_GALAXY, seam:true, colors:"s23"
+  }),
+  s23p: phone({
+    brand:"samsung", name:"Galaxy S23+", series:"S23 시리즈", slug:"galaxys23plus",
+    mm:[76.2,157.8], diag:6.6, r:92, modes:one(1080,2340),
+    cut:{type:"hole", d:36, top:42}, btn:BTN_GALAXY, seam:true, colors:"s23"
+  }),
+  s23: phone({
+    brand:"samsung", name:"Galaxy S23", series:"S23 시리즈", slug:"galaxys23",
+    mm:[70.9,146.3], diag:6.1, r:92, modes:one(1080,2340),
+    cut:{type:"hole", d:36, top:41}, btn:BTN_GALAXY, seam:true, colors:"s23"
+  }),
+  s23fe: phone({
+    brand:"samsung", name:"Galaxy S23 FE", series:"S23 시리즈", slug:"galaxys23fe",
+    mm:[76.5,158.0], diag:6.4, r:100, modes:one(1080,2340),
+    cut:{type:"hole", d:38, top:44}, btn:BTN_GALAXY, seam:true, colors:"s23fe"
+  }),
+
+  /* ── 갤럭시 Z 폴드·플립 — 폴드는 커버·안쪽 두 벌(스크린샷 비율로 자동 선택), 플립은 펼친 화면 ── */
+  zfold8u: phone({
+    brand:"samsung", name:"Galaxy Z Fold8 Ultra", series:"Z 폴드·플립", slug:"galaxyzfold8ultra",
+    mm:[72.8,158.4], diag:6.5, r:62, modes:one(1080,2520),       // 커버(바깥) 화면
+    cut:{type:"hole", d:32, top:40}, btn:BTN_GALAXY, seam:true, colors:"zfold8u",
+    screens:["커버","안쪽"], alt: phone({ name:"Galaxy Z Fold8 Ultra", mm:[143.2,158.4], diag:8.0, r:62, modes:one(2256,2504),   // 안쪽(펼친) 화면
+      cut:{type:"hole", d:30, top:40, x:.78}, btn:BTN_GALAXY, hinge:"v" })
+  }),
+  zfold8: phone({
+    brand:"samsung", name:"Galaxy Z Fold8", series:"Z 폴드·플립", slug:"galaxyzfold8",
+    mm:[81.9,123.9], diag:5.5, r:62, modes:one(1248,1972),       // 커버 5.5" 10:16 — 가로로 넓어진 폴드
+    cut:{type:"hole", d:32, top:40}, btn:BTN_GALAXY, seam:true, colors:"zfold8",
+    screens:["커버","안쪽"], alt: phone({ name:"Galaxy Z Fold8", mm:[161.4,123.9], diag:7.6, r:62, modes:one(2448,1848),   // 안쪽 7.6" 4:3, 가로가 더 김
+      cut:{type:"hole", d:30, top:40, x:.78}, btn:BTN_GALAXY, hinge:"v" })
+  }),
+  zfold7: phone({
+    brand:"samsung", name:"Galaxy Z Fold7", series:"Z 폴드·플립", slug:"galaxyzfold7",
+    mm:[72.8,158.4], diag:6.5, r:62, modes:one(1080,2520),       // 커버(바깥) 화면
+    cut:{type:"hole", d:32, top:40}, btn:BTN_GALAXY, seam:true, colors:"zfold7",
+    screens:["커버","안쪽"], alt: phone({ name:"Galaxy Z Fold7", mm:[143.2,158.4], diag:8.0, r:62, modes:one(1968,2184),   // 안쪽(펼친) 화면
+      cut:{type:"hole", d:30, top:40, x:.78}, btn:BTN_GALAXY, hinge:"v" })
+  }),
+  zfold6: phone({
+    brand:"samsung", name:"Galaxy Z Fold6", series:"Z 폴드·플립", slug:"galaxyzfold6",
+    mm:[68.1,153.5], diag:6.3, r:62, modes:one(968,2376),       // 커버(바깥) 화면
+    cut:{type:"hole", d:32, top:40}, btn:BTN_GALAXY, seam:true, colors:"zfold6",
+    screens:["커버","안쪽"], alt: phone({ name:"Galaxy Z Fold6", mm:[132.6,153.5], diag:7.6, r:62, modes:one(1856,2160),   // 안쪽(펼친) 화면
+      cut:{type:"hole", d:30, top:40, x:.78}, btn:BTN_GALAXY, hinge:"v" })
+  }),
+  zfold5: phone({
+    brand:"samsung", name:"Galaxy Z Fold5", series:"Z 폴드·플립", slug:"galaxyzfold5",
+    mm:[67.1,154.9], diag:6.2, r:62, modes:one(904,2316),       // 커버(바깥) 화면
+    cut:{type:"hole", d:32, top:40}, btn:BTN_GALAXY, seam:true, colors:"zfold5",
+    screens:["커버","안쪽"], alt: phone({ name:"Galaxy Z Fold5", mm:[129.9,154.9], diag:7.6, r:62, modes:one(1812,2176),   // 안쪽(펼친) 화면
+      cut:{type:"hole", d:30, top:40, x:.78}, btn:BTN_GALAXY, hinge:"v" })
+  }),
+  zflip8: phone({
+    brand:"samsung", name:"Galaxy Z Flip8", series:"Z 폴드·플립", slug:"galaxyzflip8",
+    mm:[75.4,166.9], diag:6.9, r:80, modes:one(1080,2520),              // 펼친 화면
+    cut:{type:"hole", d:34, top:40}, btn:BTN_GALAXY, seam:true, hinge:"h", colors:"zflip8",
+    screens:["펼침","커버"],
+    alt: phone({ name:"Galaxy Z Flip8", mm:[75.4,85.7], diag:4.1, r:110, modes:one(948,1048),   // 접은 앞면 커버(플렉스 윈도우)
+      cut:{type:"flexcam", d:120, off:40, gap:40}, btn:BTN_GALAXY })
+  }),
+  zflip7: phone({
+    brand:"samsung", name:"Galaxy Z Flip7", series:"Z 폴드·플립", slug:"galaxyzflip7",
+    mm:[75.2,166.7], diag:6.9, r:80, modes:one(1080,2520),              // 펼친 화면
+    cut:{type:"hole", d:34, top:40}, btn:BTN_GALAXY, seam:true, hinge:"h", colors:"zflip7",
+    screens:["펼침","커버"],
+    alt: phone({ name:"Galaxy Z Flip7", mm:[75.2,85.5], diag:4.1, r:110, modes:one(948,1048),   // 접은 앞면 커버(플렉스 윈도우)
+      cut:{type:"flexcam", d:120, off:40, gap:40}, btn:BTN_GALAXY })
+  }),
+  zflip6: phone({
+    brand:"samsung", name:"Galaxy Z Flip6", series:"Z 폴드·플립", slug:"galaxyzflip6",
+    mm:[71.9,165.1], diag:6.7, r:80, modes:one(1080,2640),              // 펼친 화면
+    cut:{type:"hole", d:34, top:40}, btn:BTN_GALAXY, seam:true, hinge:"h", colors:"zflip6",
+    screens:["펼침","커버"],
+    alt: phone({ name:"Galaxy Z Flip6", mm:[71.9,85.1], diag:3.4, r:110, sy:40, rail:26, modes:one(720,748),   // 접은 앞면 커버 3.4"
+      cut:{type:"flexcam", d:118, off:30, gap:34, below:true}, btn:BTN_GALAXY })
+  }),
+  zflip5: phone({
+    brand:"samsung", name:"Galaxy Z Flip5", series:"Z 폴드·플립", slug:"galaxyzflip5",
+    mm:[71.9,165.1], diag:6.7, r:80, modes:one(1080,2640),              // 펼친 화면
+    cut:{type:"hole", d:34, top:40}, btn:BTN_GALAXY, seam:true, hinge:"h", colors:"zflip5",
+    screens:["펼침","커버"],
+    alt: phone({ name:"Galaxy Z Flip5", mm:[71.9,85.1], diag:3.4, r:110, sy:40, rail:26, modes:one(720,748),   // 접은 앞면 커버 3.4"
+      cut:{type:"flexcam", d:118, off:30, gap:34, below:true}, btn:BTN_GALAXY })
   })
 };
 
@@ -780,9 +1161,124 @@ const PALETTES = {
     col("black",        "블랙",          "#2A2B2E","#1E1F22","#82858B","#111214","#232427"),
     col("silver-shadow","실버 쉐도우",   "#8C9095","#73777C","#DFE2E6","#4B4F53","#7C8085"),
     col("pink-gold",    "핑크 골드",     "#D8AD98","#BC907B","#F9E0D1","#96694F","#C99C87")
+  ],
+  "s23":[
+    col("black",   "팬텀 블랙","#2B2B2D","#1D1D1F","#86888C","#101011","#232325"),
+    col("cream",   "크림",     "#E8DFCF","#CFC3AE","#FFF9EE","#9E927C","#DDD2BF"),
+    col("green",   "그린",     "#A3B09B","#88967F","#E3EADC","#5E6B57","#95A28C"),
+    col("lavender","라벤더",   "#CBBCDD","#B0A0C4","#F1EAF8","#7E6F92","#BEAED2")
+  ],
+  "s23fe":[
+    col("mint",    "민트",     "#BFE0D2","#A2C8B8","#EAF7F1","#6F9585","#B1D5C5"),
+    col("cream",   "크림",     "#E8DFCF","#CFC3AE","#FFF9EE","#9E927C","#DDD2BF"),
+    col("graphite","그라파이트","#4A4C50","#37393D","#9A9DA3","#1E2023","#404246"),
+    col("purple",  "퍼플",     "#B7A6D6","#9C8ABF","#E7DDF5","#6B5A8A","#AA98CB")
+  ],
+  "s24":[
+    col("black",        "오닉스 블랙",   "#26272A","#1A1B1D","#7E8185","#0E0F10","#202124"),
+    col("gray",         "마블 그레이",   "#B9BBBE","#9EA1A5","#EDEEF0","#6E7175","#ADB0B3"),
+    col("cobalt-violet","코발트 바이올렛","#4A4370","#393357","#B0A8D2","#221C3B","#3B3560"),
+    col("yellow",       "앰버 옐로우",   "#EBDDA8","#D2C28A","#FFF7DB","#9C8C55","#DFD099")
+  ],
+  "s24u":[
+    col("black", "티타늄 블랙",   "#2E2F31","#202123","#85878B","#111213","#27282A"),
+    col("gray",  "티타늄 그레이", "#9A9894","#807E7A","#DAD8D4","#55534F","#8D8B87"),
+    col("violet","티타늄 바이올렛","#7E7488","#665D70","#C5BDCF","#3F3847","#72687C"),
+    col("yellow","티타늄 옐로우", "#D9CFA8","#BFB48B","#F6F0D6","#8A7F58","#CCC199")
+  ],
+  "s24fe":[
+    col("blue",    "블루",     "#8FA6CC","#7389B2","#DAE4F4","#4A5C7E","#8199C0"),
+    col("graphite","그라파이트","#4A4C50","#37393D","#9A9DA3","#1E2023","#404246"),
+    col("gray",    "그레이",   "#B8BABD","#9DA0A4","#ECEDEF","#6D7074","#ACAFB2"),
+    col("mint",    "민트",     "#C3E0D2","#A6C8B8","#ECF7F1","#739585","#B5D5C5"),
+    col("yellow",  "옐로우",   "#EFE2A5","#D6C888","#FFF8DA","#A08F55","#E3D597")
+  ],
+  "s25":[
+    col("icy-blue",     "아이스블루", "#C3D5E6","#A6BBD0","#EEF4FA","#6F8499","#B5C9DC"),
+    col("navy",         "네이비",     "#2E3A55","#222C42","#7E8AA6","#121827","#28334C"),
+    col("mint",         "민트",       "#C2DDD0","#A5C5B6","#EBF6F0","#709384","#B4D2C4"),
+    col("silver-shadow","실버 쉐도우","#8C9095","#73777C","#DFE2E6","#4B4F53","#7C8085")
+  ],
+  "s25u":[
+    col("silver-blue","티타늄 실버블루", "#9FAEBF","#8494A6","#DCE4EE","#56657A","#93A3B5"),
+    col("black",      "티타늄 블랙",     "#2E2F31","#202123","#85878B","#111213","#27282A"),
+    col("white",      "티타늄 화이트실버","#E3E4E6","#C6C8CB","#FFFFFF","#9A9C9F","#D5D7DA"),
+    col("gray",       "티타늄 그레이",   "#8E8D8A","#74736F","#D2D1CD","#4B4A47","#82817D")
+  ],
+  "s25edge":[
+    col("silver",  "티타늄 실버",    "#CFD2D6","#B2B6BB","#F7F8FA","#83878C","#C2C6CA"),
+    col("black",   "티타늄 제트블랙","#1E1F21","#141516","#6C6F73","#09090A","#18191B"),
+    col("icy-blue","티타늄 아이스블루","#BFD3E6","#A2B8CF","#ECF3FA","#6B8198","#B1C6DB")
+  ],
+  "s25fe":[
+    col("icy-blue","아이스블루","#C3D5E6","#A6BBD0","#EEF4FA","#6F8499","#B5C9DC"),
+    col("black",   "제트블랙",  "#1E1F21","#141516","#6C6F73","#09090A","#18191B"),
+    col("navy",    "네이비",    "#2E3A55","#222C42","#7E8AA6","#121827","#28334C"),
+    col("white",   "화이트",    "#E6E6E9","#C8C8CD","#FFFFFF","#9FA0A5","#D6D6DB")
+  ],
+  "zfold7":[
+    col("blue-shadow","블루 쉐도우","#3F4E66","#344054","#B6BCC5","#1E2531","#3A485E"),
+    col("silver-shadow","실버 쉐도우","#8C9095","#73767A","#D3D5D7","#434548","#818489"),
+    col("black","제트블랙","#1E1F21","#19191B","#AAAAAB","#0E0F10","#1C1D1E")
+  ],
+  "zfold6":[
+    col("silver-shadow","실버 쉐도우","#8C9095","#73767A","#D3D5D7","#434548","#818489"),
+    col("pink","핑크","#E9C9CF","#BFA5AA","#F7EAED","#706063","#D6B9BE"),
+    col("navy","네이비","#2E3A55","#263046","#B0B4BE","#161C29","#2A354E")
+  ],
+  "zfold5":[
+    col("icy-blue","아이시 블루","#C3D5E6","#A0AFBD","#E8EFF6","#5E666E","#B3C4D4"),
+    col("cream","크림","#E8DFCF","#BEB7AA","#F6F3ED","#6F6B63","#D5CDBE"),
+    col("black","팬텀 블랙","#2B2B2D","#232325","#AEAEAF","#151516","#282829")
+  ],
+  "zflip7":[
+    col("blue-shadow","블루 쉐도우","#3F4E66","#344054","#B6BCC5","#1E2531","#3A485E"),
+    col("coral-red","코랄레드","#D9604F","#B24F41","#F1C3BC","#682E26","#C85849"),
+    col("black","제트블랙","#1E1F21","#19191B","#AAAAAB","#0E0F10","#1C1D1E")
+  ],
+  "zflip6":[
+    col("blue","블루","#9DB6D6","#8195AF","#DAE3EF","#4B5767","#90A7C5"),
+    col("yellow","옐로우","#F0E28E","#C5B974","#F9F4D4","#736C44","#DDD083"),
+    col("mint","민트","#C2E2D2","#9FB9AC","#E8F4EE","#5D6C65","#B2D0C1"),
+    col("silver-shadow","실버 쉐도우","#8C9095","#73767A","#D3D5D7","#434548","#818489")
+  ],
+  "zflip5":[
+    col("mint","민트","#C2E2D2","#9FB9AC","#E8F4EE","#5D6C65","#B2D0C1"),
+    col("graphite","그라파이트","#4A4C50","#3D3E42","#BABBBC","#242426","#44464A"),
+    col("cream","크림","#E8DFCF","#BEB7AA","#F6F3ED","#6F6B63","#D5CDBE"),
+    col("lavender","라벤더","#CBBCDD","#A69AB5","#EBE6F2","#615A6A","#BBADCB")
+  ],
+  "zfold8u":[
+    col("graphite","그라파이트","#4A4C50","#3D3E42","#BABBBC","#242426","#44464A"),
+    col("cream","크림","#E8DFCF","#BEB7AA","#F6F3ED","#6F6B63","#D5CDBE"),
+    col("violet-shadow","바이올렛 쉐도우","#6C6480","#595269","#C7C4CF","#34303D","#635C76")
+  ],
+  "zfold8":[
+    col("graphite","그라파이트","#4A4C50","#3D3E42","#BABBBC","#242426","#44464A"),
+    col("cream","크림","#E8DFCF","#BEB7AA","#F6F3ED","#6F6B63","#D5CDBE"),
+    col("lavender","라벤더","#CBBCDD","#A69AB5","#EBE6F2","#615A6A","#BBADCB"),
+    col("pistachio","피스타치오","#C9D6B8","#A5AF97","#EAEFE4","#606758","#B9C5A9")
+  ],
+  "zflip8":[
+    col("graphite","그라파이트","#4A4C50","#3D3E42","#BABBBC","#242426","#44464A"),
+    col("cream","크림","#E8DFCF","#BEB7AA","#F6F3ED","#6F6B63","#D5CDBE"),
+    col("pink","핑크","#E9C9CF","#BFA5AA","#F7EAED","#706063","#D6B9BE"),
+    col("mint","민트","#C2E2D2","#9FB9AC","#E8F4EE","#5D6C65","#B2D0C1")
   ]
 };
 Object.values(DEVICES).forEach(d=>{ if(typeof d.colors==="string") d.colors=PALETTES[d.colors]; });
+// 폴드 안쪽 프레임은 바깥과 같은 브랜드·색을 쓴다(프레임 캐시가 섞이지 않게 slug 만 따로)
+Object.values(DEVICES).forEach(d=>{ if(d.alt) Object.assign(d.alt,{brand:d.brand, colors:d.colors, slug:d.slug+"-alt"}); });
+
+/* 화면이 두 벌인 기기(폴드: 커버·안쪽 / 플립7: 펼침·커버). d.screens 가 [기본, 다른 화면] 이름이다.
+   '자동'이면 스크린샷 비율로 고른다 — 기본 쪽은 세로가 가로의 2.3배 넘게 길고, 다른 화면(폴드 안쪽·
+   플립 앞면 커버)은 1.1~1.2배로 거의 정사각형이라 1.5 를 경계로 가른다. 여러 장을 섞어도 한 장씩 고른다. */
+function devFor(w,h){
+  const d=dev(); if(!d.alt) return d;
+  if(S.fold==="alt") return d.alt;
+  if(S.fold==="main" || !w || !h) return d;
+  return h/w < 1.5 ? d.alt : d;
+}
 
 /* ── 프레임 그리기 ──────────────────────────────────────────────── */
 /* own — 참이면 프레임 쪽 아일랜드를 그리지 않습니다(다이내믹 아일랜드를 껐거나, 스크린샷에 이미 찍혀 있을 때) */
@@ -827,11 +1323,20 @@ function frameSVG(d,c,sheen,own){
 <rect x="${cx-40}" y="${sc.y+6}" width="80" height="9" rx="4.5" fill="#1C1E22"/>
 <circle cx="${R-62}" cy="${sc.y+k.h/2}" r="11" fill="#0C1420"/>
 <circle cx="${R-62}" cy="${sc.y+k.h/2}" r="5" fill="#16243A" opacity=".85"/>`;
+  } else if(k.type==="flexcam"){
+    const R=k.d/2;
+    const y = k.below ? (sc.y+sc.h+bd.h-(d.rail||0))/2 : sc.y+sc.h-k.off-R;   // below: 화면 밑 유리 띠 가운데
+    const x1=(k.below ? (d.rail||0) : sc.x)+k.off+R, x2=x1+k.d+k.gap;
+    cut=[x1,x2].map(x=>`<circle cx="${x}" cy="${y}" r="${R+7}" fill="#000"/>
+<circle cx="${x}" cy="${y}" r="${R}" fill="${c.mid}" stroke="${c.lo}" stroke-width="2"/>
+<circle cx="${x}" cy="${y}" r="${(R*.74).toFixed(1)}" fill="#0B0D12"/>
+<circle cx="${x}" cy="${y}" r="${(R*.4).toFixed(1)}" fill="#15233A"/>
+<circle cx="${(x-R*.2).toFixed(1)}" cy="${(y-R*.22).toFixed(1)}" r="${(R*.12).toFixed(1)}" fill="#fff" opacity=".35"/>`).join("");
   } else if(k.type==="hole"){
-    const y=sc.y+k.top;
-    cut=`<circle cx="${cx}" cy="${y}" r="${k.d/2}" fill="#000"/>
-<circle cx="${cx}" cy="${y}" r="${(k.d*.3).toFixed(1)}" fill="#0B1626"/>
-<circle cx="${cx}" cy="${y}" r="${(k.d*.13).toFixed(1)}" fill="#1B2C46" opacity=".9"/>`;
+    const y=sc.y+k.top, hx=k.x!=null ? sc.x+sc.w*k.x : cx;
+    cut=`<circle cx="${hx}" cy="${y}" r="${k.d/2}" fill="#000"/>
+<circle cx="${hx}" cy="${y}" r="${(k.d*.3).toFixed(1)}" fill="#0B1626"/>
+<circle cx="${hx}" cy="${y}" r="${(k.d*.13).toFixed(1)}" fill="#1B2C46" opacity=".9"/>`;
   }
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}">
@@ -844,6 +1349,8 @@ function frameSVG(d,c,sheen,own){
     <rect x="${sc.x}" y="${sc.y}" width="${sc.w}" height="${sc.h}" rx="${sc.r}" fill="#000"/>
   </mask>
   <clipPath id="scr"><rect x="${sc.x}" y="${sc.y}" width="${sc.w}" height="${sc.h}" rx="${sc.r}"/></clipPath>
+  <linearGradient id="creaseV" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset=".4" stop-color="#000" stop-opacity=".09"/><stop offset=".5" stop-color="#fff" stop-opacity=".12"/><stop offset=".6" stop-color="#000" stop-opacity=".09"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>
+  <linearGradient id="creaseH" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset=".4" stop-color="#000" stop-opacity=".09"/><stop offset=".5" stop-color="#fff" stop-opacity=".12"/><stop offset=".6" stop-color="#000" stop-opacity=".09"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>
 </defs>
 <g fill="${c.btn}">${btns}</g>
 <g mask="url(#hole)">
@@ -856,6 +1363,8 @@ function frameSVG(d,c,sheen,own){
 </g>
 <rect x="${sc.x+2}" y="${sc.y+2}" width="${sc.w-4}" height="${sc.h-4}" rx="${Math.max(sc.r-2,0)}" fill="none" stroke="#000" stroke-opacity="${home?.85:.55}" stroke-width="${home?5:4}"/>
 ${front}${cut}
+${d.hinge==="v"?`<g clip-path="url(#scr)"><rect x="${cx-10}" y="${sc.y}" width="20" height="${sc.h}" fill="url(#creaseV)"/></g>`:""}
+${d.hinge==="h"?`<g clip-path="url(#scr)"><rect x="${sc.x}" y="${sc.y+sc.h/2-10}" width="${sc.w}" height="20" fill="url(#creaseH)"/></g>`:""}
 ${sheen?`<g clip-path="url(#scr)"><rect x="${sc.x}" y="${sc.y}" width="${sc.w}" height="${sc.h}" fill="url(#shn)"/></g>`:""}
 </svg>`;
 }
@@ -869,7 +1378,7 @@ const DEFAULTS = {
 const S = {
   ...DEFAULTS.apple,
   last:{},                                         // 브랜드별 마지막 선택 {dev,color,mode}
-  fit:"cover", letter:"#000000", sheen:false, island:true,
+  fit:"cover", letter:"#000000", sheen:false, island:true, fold:"auto",
   bg:"none", bg1:"#FFFFFF", bg2:"#DCE6F0", pad:0.06, shadow:true,
   width:"900", shots:[], idx:0
 };
@@ -879,7 +1388,7 @@ const color = () => dev().colors.find(c=>c.id===S.color) || dev().colors[0];
 const mode = () => dev().modes.find(m=>m.id===S.mode) || dev().modes[0];
 
 /* ── 설정 저장 ─────────────────────────────────────────────────── */
-const KEYS=["dev","last","color","mode","fit","letter","sheen","island","bg","bg1","bg2","pad","shadow","width"];
+const KEYS=["dev","last","color","mode","fit","letter","sheen","island","fold","bg","bg1","bg2","pad","shadow","width"];
 function saveCfg(){ S.last[dev().brand]={dev:S.dev, color:S.color, mode:S.mode}; try{ const o={}; KEYS.forEach(k=>o[k]=S[k]); localStorage.setItem("phone-mockup",JSON.stringify(o)); }catch(e){} }
 function loadCfg(){
   try{
@@ -912,23 +1421,23 @@ async function withFile(file,fn){
   finally{ URL.revokeObjectURL(url); }
 }
 const frameCache=new Map();
-async function frameImage(own=false){
-  const key=`${S.dev}|${S.color}|${S.sheen}|${own}`;
+async function frameImage(d, own=false){
+  const key=`${d.slug}|${S.color}|${S.sheen}|${own}`;
   if(frameCache.has(key)) return frameCache.get(key);
-  const svg=dev().frame(color(),S.sheen,own);
+  const svg=d.frame(color(),S.sheen,own);
   const img=await loadImage("data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg));
   frameCache.set(key,img);
   return img;
 }
 
 /* ── 출력 크기 계산 ────────────────────────────────────────────── */
-function outputSize(){
-  const d=dev(), pad=S.pad*d.vb.w;
+function outputSize(d=dev()){
+  const pad=S.pad*d.vb.w;
   const totalU=d.vb.w+pad*2, totalH=d.vb.h+pad*2;
   let w;
-  if(S.width==="native") w=Math.round(totalU*(mode().w/d.screen.w));
+  if(S.width==="native") w=Math.round(totalU*((d===dev()?mode():d.modes[0]).w/d.screen.w));
   else w=parseInt(S.width,10);
-  return {w, h:Math.round(w*totalH/totalU), scale:w/totalU, padU:pad, totalU, totalHU:totalH};
+  return {w, h:Math.round(w*totalH/totalU), scale:w/totalU, padU:pad, totalU, totalHU:totalH, d};
 }
 
 /* ── 합성 ──────────────────────────────────────────────────────── */
@@ -993,7 +1502,7 @@ async function signMark(ctx, d, ox, oy, k){
   ctx.drawImage(off, Math.round(ox+(bd.w/2-w/2)*k), Math.round(oy+(cy-h/2)*k));
 }
 async function compose(canvas, shotImg, out){
-  const d=dev(), ctx=canvas.getContext("2d");
+  const d=out.d||dev(), ctx=canvas.getContext("2d");
   canvas.width=out.w; canvas.height=out.h;
   const k=out.scale;
   const ox=(out.padU-d.vb.x)*k, oy=(out.padU-d.vb.y)*k;   // 뷰박스 원점 → 캔버스 좌표
@@ -1042,7 +1551,7 @@ async function compose(canvas, shotImg, out){
 
   // 4. 프레임 덮기. 아일랜드를 껐으면 빼고, 켰어도 스크린샷에 이미 있으면 뺀다
   const own = d.cut.type==="island" && (!S.island || (!!shotImg && islandInShot(ctx, ox, oy, k, d)));
-  const f=await frameImage(own);
+  const f=await frameImage(d, own);
   ctx.drawImage(f, ox+U(d.vb.x), oy+U(d.vb.y), U(d.vb.w), U(d.vb.h));
 
   // 5. 사인
@@ -1053,16 +1562,17 @@ async function compose(canvas, shotImg, out){
 let renderToken=0;
 async function render(){
   const token=++renderToken;
-  const out=outputSize();
-  $("outSize").textContent=`${out.w} × ${out.h} px`;
-
   const shot=S.shots[S.idx];
   const cv=$("preview");
-  const previewW=Math.min(out.w, 760);
-  const pOut={...out, w:previewW, h:Math.round(previewW*out.totalHU/out.totalU),
-              scale:previewW/out.totalU, padU:out.padU};
-
-  const draw = img => { if(token===renderToken) return compose(cv,img,pOut); };
+  // 폴드는 사진마다 커버·안쪽 프레임이 달라 출력 크기도 사진을 연 뒤에 잰다
+  const draw = img => {
+    if(token!==renderToken) return;
+    const out=outputSize(devFor(img&&img.naturalWidth, img&&img.naturalHeight));
+    $("outSize").textContent=`${out.w} × ${out.h} px`;
+    const previewW=Math.min(out.w, 760);
+    const pOut={...out, w:previewW, h:Math.round(previewW*out.totalHU/out.totalU), scale:previewW/out.totalU};
+    return compose(cv,img,pOut);
+  };
   if(shot) await withFile(shot.file, draw); else await draw(null);
   if(token!==renderToken) return;
 
@@ -1072,7 +1582,7 @@ async function render(){
 function checkAspect(shot){
   const n=$("aspectNote");
   if(!shot||!shot.w){ n.hidden=true; return; }
-  const d=dev(), target=d.screen.h/d.screen.w, ar=shot.h/shot.w;
+  const d=devFor(shot.w,shot.h), target=d.screen.h/d.screen.w, ar=shot.h/shot.w;
   if(Math.abs(ar-target)/target < 0.02){ n.hidden=true; return; }
   $("aspectDetail").textContent =
     `스크린샷 ${shot.w}×${shot.h} (${ar.toFixed(2)}:1), 기기 화면은 ${target.toFixed(2)}:1. ` +
@@ -1196,7 +1706,7 @@ async function renderAll(indices, cv, out){
     const shot=S.shots[i];
     setStatus(`${done+1}/${indices.length} 합성 중… ${shot.name}`);
     progress(done,indices.length);
-    await withFile(shot.file, img=>compose(cv,img,out));
+    await withFile(shot.file, img=>compose(cv,img,outputSize(devFor(img.naturalWidth,img.naturalHeight))));
     const blob=await canvasBlob(cv);
     items.push({name:outName(shot,i), blob});
     done++; progress(done,indices.length);
@@ -1233,7 +1743,7 @@ async function exportShots(indices){
       const shot=S.shots[i];
       setStatus(`${done+1}/${indices.length} 합성 중… ${shot.name}`);
       progress(done,indices.length);
-      await withFile(shot.file, img=>compose(cv,img,out));
+      await withFile(shot.file, img=>compose(cv,img,outputSize(devFor(img.naturalWidth,img.naturalHeight))));
       const blob=await canvasBlob(cv);
       try{
         await saveBlob(outName(shot,i), blob);
@@ -1262,9 +1772,15 @@ function buildDevice(){
   const brand=dev().brand;
   [...$("brandSeg").children].forEach(b=>b.setAttribute("aria-pressed", b.dataset.v===brand?"true":"false"));
   const sel=$("model"); sel.textContent="";
+  // 시리즈마다 묶음 제목(optgroup). 폰 선택창에서도 제목으로 나뉘어 보인다
+  const groups=new Map();
   Object.entries(DEVICES).filter(([,d])=>d.brand===brand).forEach(([id,d])=>{
-    const o=document.createElement("option");
-    o.value=id; o.textContent=d.name; sel.appendChild(o);
+    const g=d.series||""; if(!groups.has(g)) groups.set(g,[]); groups.get(g).push([id,d]);
+  });
+  groups.forEach((items,g)=>{
+    const box=g ? Object.assign(document.createElement("optgroup"),{label:g}) : sel;
+    items.forEach(([id,d])=>{ const o=document.createElement("option"); o.value=id; o.textContent=d.name; box.appendChild(o); });
+    if(g) sel.appendChild(box);
   });
   sel.value=S.dev;
 }
@@ -1301,9 +1817,12 @@ function buildModes(){
   sel.value=S.mode;
   $("resRow").hidden = d.modes.length<2;
   $("islandRow").hidden = d.cut.type!=="island";   // 아일랜드가 있는 아이폰에서만
+  $("foldRow").hidden = !d.alt;                   // 화면이 두 벌인 기기에서만(단추 글자는 기기마다)
+  if(d.alt){ $("foldMain").textContent=d.screens[0]; $("foldAlt").textContent=d.screens[1]; }
   // 한 줄에 이어 붙이면 좁은 설정판에서 '맞 / 추세요' 처럼 끊겨 두 줄 목록으로 나눈다
   const spec=$("devSpec"); spec.textContent="";
-  [`권장 스크린샷 ${mode().w} × ${mode().h} px`, ...(d.modes.length>1 ? ["기기 설정의 화면 해상도와 맞추세요"] : [])]
+  (d.alt ? [`권장 스크린샷 ${mode().w} × ${mode().h} px (${d.screens[0]})`, `권장 스크린샷 ${d.alt.modes[0].w} × ${d.alt.modes[0].h} px (${d.screens[1]})`]
+           : [`권장 스크린샷 ${mode().w} × ${mode().h} px`, ...(d.modes.length>1 ? ["기기 설정의 화면 해상도와 맞추세요"] : [])])
     .forEach(t=>{ const li=document.createElement("li"); li.textContent=t; spec.appendChild(li); });
 }
 function bindSeg(id,key,after){
@@ -1328,7 +1847,8 @@ loadCfg();
 buildDevice(); buildSwatches(); buildModes();
 [...$("brandSeg").children].forEach(b=>{ b.onclick=()=>{ if(b.dataset.v!==dev().brand) setBrand(b.dataset.v); }; });
 $("model").onchange=e=>setDevice(e.target.value);
-bindSeg("fitSeg","fit"); bindSeg("bgSeg","bg",syncBg); syncBg();
+if(!["auto","main","alt"].includes(S.fold)) S.fold="auto";
+bindSeg("fitSeg","fit"); bindSeg("foldSeg","fold"); bindSeg("bgSeg","bg",syncBg); syncBg();
 
 $("letter").value=S.letter; $("bg1").value=S.bg1; $("bg2").value=S.bg2;
 $("sheen").checked=S.sheen; $("shadow").checked=S.shadow; $("island").checked=S.island;
@@ -1368,6 +1888,43 @@ document.querySelectorAll("[data-help]").forEach(b=>b.onclick=e=>{ e.stopPropaga
 $("helpClose").onclick=closeHelp;
 $("help").addEventListener("click",e=>{ if(e.target===$("help")) closeHelp(); });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape" && !$("help").hidden) closeHelp(); });
+
+/* ── 기기 검색 ── 이름으로 바로 찾는다. '울트라·플러스·프로·맥스·엣지' 같은 한글도 받고,
+   띄어 쓴 낱말은 순서와 상관없이 모두 들어간 기기만 보인다(짧은 이름부터 = 더 정확한 것부터). */
+const ALIAS=[["갤럭시","galaxy"],["아이폰","iphone"],["울트라","ultra"],["플러스","plus"],["프로","pro"],["맥스","max"],
+  ["엣지","edge"],["에지","edge"],["에어","air"],["미니","mini"],["폴드","fold"],["플립","flip"],["+","plus"],["세대",""]];
+const normName=t=>{ t=t.toLowerCase(); for(const [a,b] of ALIAS) t=t.split(a).join(b); return t.replace(/[^a-z0-9]/g,""); };
+const DEV_INDEX=Object.entries(DEVICES).map(([id,d])=>({id,d,key:normName(d.name)}));
+function searchDevices(q){
+  const toks=q.trim().split(/\s+/).map(normName).filter(Boolean);
+  if(!toks.length) return [];
+  return DEV_INDEX.filter(x=>toks.every(t=>x.key.includes(t))).sort((a,b)=>a.key.length-b.key.length).slice(0,10);
+}
+(()=>{
+  const q=$("devQ"), box=$("devHits"); let hits=[], sel=0;
+  const mark=()=>[...box.querySelectorAll(".dhit")].forEach((b,i)=>b.setAttribute("aria-selected", i===sel));
+  const draw=()=>{
+    if(!q.value.trim()){ box.hidden=true; hits=[]; return; }
+    hits=searchDevices(q.value); sel=0;
+    box.innerHTML = hits.length
+      ? hits.map((h,i)=>`<button type="button" class="dhit" role="option" data-id="${h.id}" aria-selected="${i===0}">${h.d.name}<small>${h.d.brand==="apple"?"아이폰":"갤럭시"}</small></button>`).join("")
+      : '<div class="dnone">검색 결과 없음</div>';
+    box.hidden=false;
+  };
+  const pick=id=>{ setDevice(id); q.value=""; box.hidden=true; hits=[]; q.blur(); };
+  q.addEventListener("input",draw);
+  q.addEventListener("focus",draw);
+  q.addEventListener("keydown",e=>{
+    if(e.key==="Escape"){ q.value=""; box.hidden=true; return; }
+    if(box.hidden||!hits.length) return;
+    if(e.key==="ArrowDown"){ e.preventDefault(); sel=(sel+1)%hits.length; mark(); }
+    else if(e.key==="ArrowUp"){ e.preventDefault(); sel=(sel-1+hits.length)%hits.length; mark(); }
+    else if(e.key==="Enter"){ e.preventDefault(); pick(hits[sel].id); }
+  });
+  box.addEventListener("mousedown",e=>e.preventDefault());    // 누르는 사이 입력칸이 blur 되어 목록이 먼저 닫히지 않게
+  box.addEventListener("click",e=>{ const b=e.target.closest(".dhit"); if(b) pick(b.dataset.id); });
+  q.addEventListener("blur",()=>setTimeout(()=>{ box.hidden=true; },150));
+})();
 
 /* ── 폰을 눌러 첨부 ────────────────────────────────────────────────
    비어 있을 때는 한 번 누르면 바로 파일 창(업로드 칸의 관례 — shots.so 도 '미디어 칸 클릭').
