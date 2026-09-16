@@ -482,6 +482,14 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--main);cursor:poin
         <input type="color" id="bg2" value="#DCE6F0">
       </div>
       <div class="row">
+        <label>화면 비율</label>
+        <div class="seg" id="ratioSeg" style="flex:0 1 230px">
+          <button type="button" data-v="fit">기본</button>
+          <button type="button" data-v="story">9:16</button>
+          <button type="button" data-v="square">1:1</button>
+        </div>
+      </div>
+      <div class="row">
         <label for="pad">기기 주변 여백</label>
         <select id="pad">
           <option value="0">없음</option>
@@ -576,6 +584,13 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--main);cursor:poin
         <div class="ans">
           <p>[기기] › 화면을 <b>자동</b>으로 두면 스크린샷 비율로 고릅니다. 폴드는 길쭉하면 <b>커버</b>, 정사각형에 가깝거나 가로로 넓으면 <b>안쪽</b>(펼친 화면)이고, 플립은 길쭉하면 <b>펼침</b>, 정사각형에 가까우면 앞면 <b>커버</b>입니다.</p>
           <p>여러 장을 섞어 넣어도 한 장씩 따로 고릅니다. 잘못 고르면 옆의 단추로 직접 고르세요.</p>
+        </div>
+      </details>
+      <details>
+        <summary>인스타 스토리에 올리면 뒤가 검게 나와요</summary>
+        <div class="ans">
+          <p>인스타그램은 올린 사진을 평평하게 눌러 저장하면서 <b>투명을 없애고 색으로 채웁니다</b>. 목업 파일 자체는 투명해도 스토리에서는 검게 보일 수 있습니다.</p>
+          <p>[배경]을 <b>단색</b>이나 <b>그라디언트</b>로 고르고, [화면 비율]을 <b>9:16</b>으로 두면 스토리 화면을 꽉 채워 검은 띠 없이 올라갑니다.</p>
         </div>
       </details>
       <details>
@@ -1378,7 +1393,7 @@ const DEFAULTS = {
 const S = {
   ...DEFAULTS.apple,
   last:{},                                         // 브랜드별 마지막 선택 {dev,color,mode}
-  fit:"cover", letter:"#000000", sheen:false, island:true, fold:"auto",
+  fit:"cover", letter:"#000000", sheen:false, island:true, fold:"auto", ratio:"fit",
   bg:"none", bg1:"#FFFFFF", bg2:"#DCE6F0", pad:0.06, shadow:true,
   width:"900", shots:[], idx:0
 };
@@ -1388,7 +1403,7 @@ const color = () => dev().colors.find(c=>c.id===S.color) || dev().colors[0];
 const mode = () => dev().modes.find(m=>m.id===S.mode) || dev().modes[0];
 
 /* ── 설정 저장 ─────────────────────────────────────────────────── */
-const KEYS=["dev","last","color","mode","fit","letter","sheen","island","fold","bg","bg1","bg2","pad","shadow","width"];
+const KEYS=["dev","last","color","mode","fit","letter","sheen","island","fold","bg","bg1","bg2","pad","shadow","width","ratio"];
 function saveCfg(){ S.last[dev().brand]={dev:S.dev, color:S.color, mode:S.mode}; try{ const o={}; KEYS.forEach(k=>o[k]=S[k]); localStorage.setItem("phone-mockup",JSON.stringify(o)); }catch(e){} }
 function loadCfg(){
   try{
@@ -1437,7 +1452,12 @@ function outputSize(d=dev()){
   let w;
   if(S.width==="native") w=Math.round(totalU*((d===dev()?mode():d.modes[0]).w/d.screen.w));
   else w=parseInt(S.width,10);
-  return {w, h:Math.round(w*totalH/totalU), scale:w/totalU, padU:pad, totalU, totalHU:totalH, d};
+  if(S.ratio==="fit") return {w, h:Math.round(w*totalH/totalU), scale:w/totalU, padU:pad, totalU, totalHU:totalH, d, offX:0, offY:0};
+  // 스토리(9:16)·정사각(1:1)은 고른 가로 폭이 곧 판 크기. 기기는 판 안에 들어가게 줄여 가운데 둔다
+  const cw=w, ch=Math.round(w / (S.ratio==="story" ? 9/16 : 1));
+  const k=Math.min(cw/totalU, ch/totalH);
+  return {w:cw, h:ch, scale:k, padU:pad, totalU, totalHU:totalH, d,
+          offX:(cw-totalU*k)/2, offY:(ch-totalH*k)/2};
 }
 
 /* ── 합성 ──────────────────────────────────────────────────────── */
@@ -1505,7 +1525,7 @@ async function compose(canvas, shotImg, out){
   const d=out.d||dev(), ctx=canvas.getContext("2d");
   canvas.width=out.w; canvas.height=out.h;
   const k=out.scale;
-  const ox=(out.padU-d.vb.x)*k, oy=(out.padU-d.vb.y)*k;   // 뷰박스 원점 → 캔버스 좌표
+  const ox=(out.offX||0)+(out.padU-d.vb.x)*k, oy=(out.offY||0)+(out.padU-d.vb.y)*k;   // 뷰박스 원점 → 캔버스 좌표
   const U=n=>n*k;
 
   ctx.clearRect(0,0,out.w,out.h);
@@ -1569,8 +1589,9 @@ async function render(){
     if(token!==renderToken) return;
     const out=outputSize(devFor(img&&img.naturalWidth, img&&img.naturalHeight));
     $("outSize").textContent=`${out.w} × ${out.h} px`;
-    const previewW=Math.min(out.w, 760);
-    const pOut={...out, w:previewW, h:Math.round(previewW*out.totalHU/out.totalU), scale:previewW/out.totalU};
+    const previewW=Math.min(out.w, 760), f=previewW/out.w;          // 판째로 줄여 미리 본다
+    const pOut={...out, w:previewW, h:Math.round(out.h*f), scale:out.scale*f,
+                offX:(out.offX||0)*f, offY:(out.offY||0)*f};
     return compose(cv,img,pOut);
   };
   if(shot) await withFile(shot.file, draw); else await draw(null);
@@ -1848,7 +1869,7 @@ buildDevice(); buildSwatches(); buildModes();
 [...$("brandSeg").children].forEach(b=>{ b.onclick=()=>{ if(b.dataset.v!==dev().brand) setBrand(b.dataset.v); }; });
 $("model").onchange=e=>setDevice(e.target.value);
 if(!["auto","main","alt"].includes(S.fold)) S.fold="auto";
-bindSeg("fitSeg","fit"); bindSeg("foldSeg","fold"); bindSeg("bgSeg","bg",syncBg); syncBg();
+bindSeg("fitSeg","fit"); bindSeg("foldSeg","fold"); bindSeg("ratioSeg","ratio"); bindSeg("bgSeg","bg",syncBg); syncBg();
 
 $("letter").value=S.letter; $("bg1").value=S.bg1; $("bg2").value=S.bg2;
 $("sheen").checked=S.sheen; $("shadow").checked=S.shadow; $("island").checked=S.island;
