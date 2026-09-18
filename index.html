@@ -438,6 +438,10 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--main);cursor:poin
         <button type="button" data-v="samsung">갤럭시</button>
       </div>
       <div class="row">
+        <label for="form">형태</label>
+        <select id="form"></select>
+      </div>
+      <div class="row">
         <label for="model">모델</label>
         <select id="model"></select>
       </div>
@@ -604,9 +608,9 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--main);cursor:poin
         </div>
       </details>
       <details>
-        <summary>폴드·플립은 화면을 어떻게 고르나요?</summary>
+        <summary>폴드·플립·아이폰 듀오는 화면을 어떻게 고르나요?</summary>
         <div class="ans">
-          <p>[기기] › 화면을 <b>자동</b>으로 두면 스크린샷 비율로 고릅니다. 폴드는 길쭉하면 <b>커버</b>, 정사각형에 가깝거나 가로로 넓으면 <b>안쪽</b>(펼친 화면)이고, 플립은 길쭉하면 <b>펼침</b>, 정사각형에 가까우면 앞면 <b>커버</b>입니다.</p>
+          <p>[기기] › 화면을 <b>자동</b>으로 두면 스크린샷 비율로 고릅니다. 폴드는 길쭉하면 <b>커버</b>, 정사각형에 가깝거나 가로로 넓으면 <b>안쪽</b>(펼친 화면)이고, 플립은 길쭉하면 <b>펼침</b>, 정사각형에 가까우면 앞면 <b>커버</b>입니다. 아이폰 듀오는 세로로 길면 <b>커버</b>, 가로로 넓으면 <b>안쪽</b>입니다.</p>
           <p>여러 장을 섞어 넣어도 한 장씩 따로 고릅니다. 잘못 고르면 옆의 단추로 직접 고르세요.</p>
         </div>
       </details>
@@ -700,7 +704,7 @@ function phone(o){
   const sy=o.sy!=null ? o.sy : +((H-sh)/2).toFixed(1);
   const body={x:0,y:0,w:W,h:H,r:o.r};
   const screen={x:sx,y:sy,w:sw,h:sh,r:o.sr!=null?o.sr:Math.max(o.r-sx,0)};
-  return {...o, body, screen, vb:{x:-14,y:0,w:W+28,h:H},
+  return {...o, form:o.form||"bar", body, screen, vb:{x:-14,y:0,w:W+28,h:H},
     buttons:(o.btn||[]).map(([s,f,h])=>({s, y:Math.round(H*f), h})),
     frame(c,sheen,own){ return frameSVG(this,c,sheen,own); }};
 }
@@ -724,11 +728,23 @@ const BTN_PRO   = [["L",.204,58],["L",.274,102],["L",.355,102],["R",.299,164],["
 const BTN_NOCC  = [["L",.204,58],["L",.274,102],["L",.355,102],["R",.299,164]];              // 카메라 컨트롤 없음
 const BTN_HOME  = [["L",.150,52],["L",.235,92],["L",.320,92],["R",.235,118]];                // 벨소리 스위치·볼륨·측면
 const BTN_GALAXY= [["R",.264,178],["R",.398,92]];                                            // 볼륨·측면 키
+const BTN_DUO   = [["R",.300,150],["R",.520,90]];                                            // 측면(터치 ID)·카메라 컨트롤 — 볼륨은 윗면이라 그리지 않음
 
 /* 금속 색 한 벌: mid 기본 · dk 그늘 · hi 반사 · lo 가장자리 · btn 버튼 */
 const col = (id,name,mid,dk,hi,lo,btn,extra) => ({id,name,mid,dk,hi,lo,btn,...extra});
 
 const DEVICES = {
+  /* ── 아이폰 듀오 — 책처럼 옆으로 펴는 애플 첫 폴더블(2026-10-23 출시).
+     커버·안쪽 두 벌이고, 커버는 세로로 길지만 안쪽은 가로로 넓어 자동 판정 경계를 1.0 으로 둔다 ── */
+  ipduo: phone({
+    brand:"apple", form:"fold", name:"iPhone Duo", series:"iPhone 듀오", slug:"iphoneduo",
+    mm:[84.1,117.8], diag:5.4, r:100, modes:one(1398,2034),      // 접었을 때 바깥 커버 5.4" (펀치홀)
+    cut:{type:"hole", d:34, top:46}, btn:BTN_DUO, colors:"duo",
+    screens:["커버","안쪽"], autoAr:1.0,
+    alt: phone({ name:"iPhone Duo", mm:[164.6,117.8], diag:7.6, r:100, modes:one(2670,1878),   // 펼친 안쪽 7.6" — 카메라가 화면 아래 숨어 구멍이 없다
+      cut:{type:"none"}, btn:BTN_DUO, hinge:"v" })
+  }),
+
   /* ── 아이폰 ── */
   ip18pm: phone({
     brand:"apple", name:"iPhone 18 Pro Max", series:"iPhone 18", slug:"iphone18promax",
@@ -1112,42 +1128,42 @@ const DEVICES = {
 
   /* ── 갤럭시 Z 폴드·플립 — 폴드는 커버·안쪽 두 벌(스크린샷 비율로 자동 선택), 플립은 펼친 화면 ── */
   zfold8u: phone({
-    brand:"samsung", name:"Galaxy Z Fold8 Ultra", series:"Z 폴드·플립", slug:"galaxyzfold8ultra",
+    brand:"samsung", form:"fold", name:"Galaxy Z Fold8 Ultra", series:"Z 폴드·플립", slug:"galaxyzfold8ultra",
     mm:[72.8,158.4], diag:6.5, r:62, modes:one(1080,2520),       // 커버(바깥) 화면
     cut:{type:"hole", d:32, top:40}, btn:BTN_GALAXY, seam:true, colors:"zfold8u",
     screens:["커버","안쪽"], alt: phone({ name:"Galaxy Z Fold8 Ultra", mm:[143.2,158.4], diag:8.0, r:62, modes:one(2256,2504),   // 안쪽(펼친) 화면
       cut:{type:"hole", d:30, top:40, x:.78}, btn:BTN_GALAXY, hinge:"v" })
   }),
   zfold8: phone({
-    brand:"samsung", name:"Galaxy Z Fold8", series:"Z 폴드·플립", slug:"galaxyzfold8",
+    brand:"samsung", form:"fold", name:"Galaxy Z Fold8", series:"Z 폴드·플립", slug:"galaxyzfold8",
     mm:[81.9,123.9], diag:5.5, r:62, modes:one(1248,1972),       // 커버 5.5" 10:16 — 가로로 넓어진 폴드
     cut:{type:"hole", d:32, top:40}, btn:BTN_GALAXY, seam:true, colors:"zfold8",
     screens:["커버","안쪽"], alt: phone({ name:"Galaxy Z Fold8", mm:[161.4,123.9], diag:7.6, r:62, modes:one(2448,1848),   // 안쪽 7.6" 4:3, 가로가 더 김
       cut:{type:"hole", d:30, top:40, x:.78}, btn:BTN_GALAXY, hinge:"v" })
   }),
   zfold7: phone({
-    brand:"samsung", name:"Galaxy Z Fold7", series:"Z 폴드·플립", slug:"galaxyzfold7",
+    brand:"samsung", form:"fold", name:"Galaxy Z Fold7", series:"Z 폴드·플립", slug:"galaxyzfold7",
     mm:[72.8,158.4], diag:6.5, r:62, modes:one(1080,2520),       // 커버(바깥) 화면
     cut:{type:"hole", d:32, top:40}, btn:BTN_GALAXY, seam:true, colors:"zfold7",
     screens:["커버","안쪽"], alt: phone({ name:"Galaxy Z Fold7", mm:[143.2,158.4], diag:8.0, r:62, modes:one(1968,2184),   // 안쪽(펼친) 화면
       cut:{type:"hole", d:30, top:40, x:.78}, btn:BTN_GALAXY, hinge:"v" })
   }),
   zfold6: phone({
-    brand:"samsung", name:"Galaxy Z Fold6", series:"Z 폴드·플립", slug:"galaxyzfold6",
+    brand:"samsung", form:"fold", name:"Galaxy Z Fold6", series:"Z 폴드·플립", slug:"galaxyzfold6",
     mm:[68.1,153.5], diag:6.3, r:62, modes:one(968,2376),       // 커버(바깥) 화면
     cut:{type:"hole", d:32, top:40}, btn:BTN_GALAXY, seam:true, colors:"zfold6",
     screens:["커버","안쪽"], alt: phone({ name:"Galaxy Z Fold6", mm:[132.6,153.5], diag:7.6, r:62, modes:one(1856,2160),   // 안쪽(펼친) 화면
       cut:{type:"hole", d:30, top:40, x:.78}, btn:BTN_GALAXY, hinge:"v" })
   }),
   zfold5: phone({
-    brand:"samsung", name:"Galaxy Z Fold5", series:"Z 폴드·플립", slug:"galaxyzfold5",
+    brand:"samsung", form:"fold", name:"Galaxy Z Fold5", series:"Z 폴드·플립", slug:"galaxyzfold5",
     mm:[67.1,154.9], diag:6.2, r:62, modes:one(904,2316),       // 커버(바깥) 화면
     cut:{type:"hole", d:32, top:40}, btn:BTN_GALAXY, seam:true, colors:"zfold5",
     screens:["커버","안쪽"], alt: phone({ name:"Galaxy Z Fold5", mm:[129.9,154.9], diag:7.6, r:62, modes:one(1812,2176),   // 안쪽(펼친) 화면
       cut:{type:"hole", d:30, top:40, x:.78}, btn:BTN_GALAXY, hinge:"v" })
   }),
   zflip8: phone({
-    brand:"samsung", name:"Galaxy Z Flip8", series:"Z 폴드·플립", slug:"galaxyzflip8",
+    brand:"samsung", form:"flip", name:"Galaxy Z Flip8", series:"Z 폴드·플립", slug:"galaxyzflip8",
     mm:[75.4,166.9], diag:6.9, r:80, modes:one(1080,2520),              // 펼친 화면
     cut:{type:"hole", d:34, top:40}, btn:BTN_GALAXY, seam:true, hinge:"h", colors:"zflip8",
     screens:["펼침","커버"],
@@ -1155,7 +1171,7 @@ const DEVICES = {
       cut:{type:"flexcam", d:120, off:40, gap:40}, btn:BTN_GALAXY })
   }),
   zflip7: phone({
-    brand:"samsung", name:"Galaxy Z Flip7", series:"Z 폴드·플립", slug:"galaxyzflip7",
+    brand:"samsung", form:"flip", name:"Galaxy Z Flip7", series:"Z 폴드·플립", slug:"galaxyzflip7",
     mm:[75.2,166.7], diag:6.9, r:80, modes:one(1080,2520),              // 펼친 화면
     cut:{type:"hole", d:34, top:40}, btn:BTN_GALAXY, seam:true, hinge:"h", colors:"zflip7",
     screens:["펼침","커버"],
@@ -1163,7 +1179,7 @@ const DEVICES = {
       cut:{type:"flexcam", d:120, off:40, gap:40}, btn:BTN_GALAXY })
   }),
   zflip6: phone({
-    brand:"samsung", name:"Galaxy Z Flip6", series:"Z 폴드·플립", slug:"galaxyzflip6",
+    brand:"samsung", form:"flip", name:"Galaxy Z Flip6", series:"Z 폴드·플립", slug:"galaxyzflip6",
     mm:[71.9,165.1], diag:6.7, r:80, modes:one(1080,2640),              // 펼친 화면
     cut:{type:"hole", d:34, top:40}, btn:BTN_GALAXY, seam:true, hinge:"h", colors:"zflip6",
     screens:["펼침","커버"],
@@ -1171,7 +1187,7 @@ const DEVICES = {
       cut:{type:"flexcam", d:118, off:30, gap:34, below:true}, btn:BTN_GALAXY })
   }),
   zflip5: phone({
-    brand:"samsung", name:"Galaxy Z Flip5", series:"Z 폴드·플립", slug:"galaxyzflip5",
+    brand:"samsung", form:"flip", name:"Galaxy Z Flip5", series:"Z 폴드·플립", slug:"galaxyzflip5",
     mm:[71.9,165.1], diag:6.7, r:80, modes:one(1080,2640),              // 펼친 화면
     cut:{type:"hole", d:34, top:40}, btn:BTN_GALAXY, seam:true, hinge:"h", colors:"zflip5",
     screens:["펼침","커버"],
@@ -1182,6 +1198,10 @@ const DEVICES = {
 
 /* 같은 색 구성을 쓰는 기기끼리 한 벌을 나눠 씁니다 */
 const PALETTES = {
+  "duo":[
+    col("star-white","스타 화이트","#E7E5E0","#C5C2BB","#FFFFFF","#95928B","#DAD7D0"),
+    col("night-sky", "나이트 스카이","#2B3040","#1E222E","#8792A6","#11141C","#262B39")
+  ],
   "18pro":[
     col("burgundy","버건디", "#6A1F2C","#521722","#B56473","#2E080F","#5C1B27"),
     col("silver",  "실버",   "#DADDE0","#BBC0C5","#FFFFFF","#8B9095","#C9CDD1"),
@@ -1311,12 +1331,13 @@ Object.values(DEVICES).forEach(d=>{ if(d.alt) Object.assign(d.alt,{brand:d.brand
 
 /* 화면이 두 벌인 기기(폴드: 커버·안쪽 / 플립7: 펼침·커버). d.screens 가 [기본, 다른 화면] 이름이다.
    '자동'이면 스크린샷 비율로 고른다 — 기본 쪽은 세로가 가로의 2.3배 넘게 길고, 다른 화면(폴드 안쪽·
-   플립 앞면 커버)은 1.1~1.2배로 거의 정사각형이라 1.5 를 경계로 가른다. 여러 장을 섞어도 한 장씩 고른다. */
+   플립 앞면 커버)은 1.1~1.2배로 거의 정사각형이라 1.5 를 경계로 가른다. 경계가 다른 기기는 autoAr 로
+   따로 준다(아이폰 듀오는 커버 1.46 · 안쪽 0.70 이라 1.0). 여러 장을 섞어도 한 장씩 고른다. */
 function devFor(w,h){
   const d=dev(); if(!d.alt) return d;
   if(S.fold==="alt") return d.alt;
   if(S.fold==="main" || !w || !h) return d;
-  return h/w < 1.5 ? d.alt : d;
+  return h/w < (d.autoAr||1.5) ? d.alt : d;
 }
 
 /* ── 프레임 그리기 ──────────────────────────────────────────────── */
@@ -1417,6 +1438,7 @@ const DEFAULTS = {
 const S = {
   ...DEFAULTS.apple,
   last:{},                                         // 브랜드별 마지막 선택 {dev,color,mode}
+  form:"all",                                      // 폼팩터 거르기 — all · bar · fold · flip
   fit:"cover", letter:"#000000", sheen:false, island:true, fold:"auto", ratio:"fit",
   bg:"none", bg1:"#FFFFFF", bg2:"#DCE6F0", pad:0.06, shadow:true,
   width:"900", shots:[], idx:0
@@ -1427,7 +1449,7 @@ const color = () => dev().colors.find(c=>c.id===S.color) || dev().colors[0];
 const mode = () => dev().modes.find(m=>m.id===S.mode) || dev().modes[0];
 
 /* ── 설정 저장 ─────────────────────────────────────────────────── */
-const KEYS=["dev","last","color","mode","fit","letter","sheen","island","fold","bg","bg1","bg2","pad","shadow","width","ratio"];
+const KEYS=["dev","last","color","mode","form","fit","letter","sheen","island","fold","bg","bg1","bg2","pad","shadow","width","ratio"];
 function saveCfg(){ S.last[dev().brand]={dev:S.dev, color:S.color, mode:S.mode}; try{ const o={}; KEYS.forEach(k=>o[k]=S[k]); localStorage.setItem("phone-mockup",JSON.stringify(o)); }catch(e){} }
 function loadCfg(){
   try{
@@ -1813,13 +1835,32 @@ async function exportShots(indices){
 
 /* ── UI 구성 ──────────────────────────────────────────────────── */
 /* 아이폰/갤럭시 버튼으로 브랜드를 고르고, 모델은 목록에서 고릅니다. */
+/* 형태(폼팩터) — 바형·폴더블·플립. 브랜드에 있는 형태만 보입니다(아이폰은 플립이 없어 빠집니다) */
+const FORMS=[["all","형태 전체"],["bar","바형"],["fold","폴더블"],["flip","플립"]];
+const devList=(brand,form)=>Object.entries(DEVICES)
+  .filter(([,d])=>d.brand===brand && (form==="all"||d.form===form));
+function buildForm(){
+  const brand=dev().brand, sel=$("form"); sel.textContent="";
+  FORMS.filter(([v])=>v==="all"||devList(brand,v).length).forEach(([v,label])=>{
+    const o=document.createElement("option"); o.value=v; o.textContent=label; sel.appendChild(o);
+  });
+  if(![...sel.options].some(o=>o.value===S.form)) S.form="all";
+  sel.value=S.form;
+}
+/* 형태를 바꾸면 그 형태에 없는 기기는 같은 형태의 첫 기기로 옮겨 갑니다 */
+function setForm(v){
+  S.form=v;
+  const list=devList(dev().brand,v);
+  if(list.length && !list.some(([id])=>id===S.dev)) S.dev=list[0][0];
+  applyDevice();
+}
 function buildDevice(){
   const brand=dev().brand;
   [...$("brandSeg").children].forEach(b=>b.setAttribute("aria-pressed", b.dataset.v===brand?"true":"false"));
   const sel=$("model"); sel.textContent="";
   // 시리즈마다 묶음 제목(optgroup). 폰 선택창에서도 제목으로 나뉘어 보인다
   const groups=new Map();
-  Object.entries(DEVICES).filter(([,d])=>d.brand===brand).forEach(([id,d])=>{
+  devList(brand,S.form).forEach(([id,d])=>{
     const g=d.series||""; if(!groups.has(g)) groups.set(g,[]); groups.get(g).push([id,d]);
   });
   groups.forEach((items,g)=>{
@@ -1836,8 +1877,10 @@ function fixDevice(){
   const hasC=id=>d.colors.some(c=>c.id===id), hasM=id=>d.modes.some(m=>m.id===id);
   if(!hasC(S.color)) S.color=hasC(want.color) ? want.color : d.colors[0].id;
   if(!hasM(S.mode))  S.mode =hasM(want.mode)  ? want.mode  : d.modes[0].id;
+  // 검색이나 브랜드 바꾸기로 지금 형태에 없는 기기를 고르면 거르기를 풉니다
+  if(S.form!=="all" && d.form!==S.form) S.form="all";
 }
-function applyDevice(){ fixDevice(); buildDevice(); buildSwatches(); buildModes(); saveCfg(); render(); }
+function applyDevice(){ fixDevice(); buildForm(); buildDevice(); buildSwatches(); buildModes(); saveCfg(); render(); }
 function setDevice(id){ S.dev=id; applyDevice(); }
 /* 브랜드를 바꾸면 그 브랜드에서 마지막으로 쓴 모델·색·해상도로 돌아갑니다 */
 function setBrand(b){ Object.assign(S, S.last[b]||DEFAULTS[b]); applyDevice(); }
@@ -1889,8 +1932,9 @@ function syncBg(){
 
 /* ── 초기화 ───────────────────────────────────────────────────── */
 loadCfg();
-buildDevice(); buildSwatches(); buildModes();
+buildForm(); buildDevice(); buildSwatches(); buildModes();
 [...$("brandSeg").children].forEach(b=>{ b.onclick=()=>{ if(b.dataset.v!==dev().brand) setBrand(b.dataset.v); }; });
+$("form").onchange=e=>setForm(e.target.value);
 $("model").onchange=e=>setDevice(e.target.value);
 if(!["auto","main","alt"].includes(S.fold)) S.fold="auto";
 bindSeg("fitSeg","fit"); bindSeg("foldSeg","fold"); bindSeg("ratioSeg","ratio"); bindSeg("bgSeg","bg",syncBg); syncBg();
@@ -1937,7 +1981,7 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape" && !$("help").hidde
 /* ── 기기 검색 ── 이름으로 바로 찾는다. '울트라·플러스·프로·맥스·엣지' 같은 한글도 받고,
    띄어 쓴 낱말은 순서와 상관없이 모두 들어간 기기만 보인다(짧은 이름부터 = 더 정확한 것부터). */
 const ALIAS=[["갤럭시","galaxy"],["아이폰","iphone"],["울트라","ultra"],["플러스","plus"],["프로","pro"],["맥스","max"],
-  ["엣지","edge"],["에지","edge"],["에어","air"],["미니","mini"],["폴드","fold"],["플립","flip"],["+","plus"],["세대",""]];
+  ["엣지","edge"],["에지","edge"],["에어","air"],["미니","mini"],["폴드","fold"],["플립","flip"],["듀오","duo"],["+","plus"],["세대",""]];
 const normName=t=>{ t=t.toLowerCase(); for(const [a,b] of ALIAS) t=t.split(a).join(b); return t.replace(/[^a-z0-9]/g,""); };
 const DEV_INDEX=Object.entries(DEVICES).map(([id,d])=>({id,d,key:normName(d.name)}));
 function searchDevices(q){
