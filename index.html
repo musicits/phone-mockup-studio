@@ -28,18 +28,18 @@
    흐림(backdrop-filter)은 머리말·카드·하단 바처럼 몇 개 안 되는 큰 면에만 겁니다. */
 :root{
   --main:#7B5CF0; --main-deep:#5A3ED1; --gold:#B79CFF; --cyan:#6FC3FF;
-  --canvas:#ffffff; --surface:#F3F0FB; --surface-soft:#FAF9FE;
-  --line:#E6E1F3; --line-strong:#CBC3E3;
-  --ink:#1B1728; --slate:#4E4766; --steel:#6E6787; --stone-solid:#A39CBB;
+  --canvas:#ffffff; --surface:#F1F3F7; --surface-soft:#F7F8FA;
+  --line:#E3E6EC; --line-strong:#C7CCD6;
+  --ink:#15181E; --slate:#434955; --steel:#636A77; --stone-solid:#8E95A1;
   --warn:#C77A1F;
-  --r-sm:6px; --r-md:8px; --r-lg:12px; --r-outer:18px;
-  --glass: saturate(180%) blur(20px);
-  --glass-face: rgba(250,249,254,.72);
-  --glass-face-2: rgba(250,249,254,.58);
-  --glass-hairline: rgba(50,30,110,.10);
-  --glass-rim: inset 0 1px 0 rgba(255,255,255,.75);
+  --r-sm:8px; --r-md:10px; --r-lg:16px; --r-outer:24px;
+  --glass: saturate(180%) blur(26px);
+  --glass-face: rgba(247,248,250,.74);
+  --glass-face-2: rgba(247,248,250,.58);
+  --glass-hairline: rgba(20,35,60,.10);
+  --glass-rim: inset 0 1px 0 rgba(255,255,255,.92), inset 0 0 0 .5px rgba(20,35,60,.14), 0 0 0 .5px rgba(20,35,60,.10);
   --glass-sheen: rgba(255,255,255,.55);
-  --glass-drop: 0 24px 48px -28px rgba(50,30,110,.34), 0 2px 8px -4px rgba(50,30,110,.10);
+  --glass-drop: 0 24px 48px -28px rgba(20,35,60,.30), 0 2px 8px -4px rgba(20,35,60,.10);
   --focus: 0 0 0 3px rgba(123,92,240,.32);
   --sel-bg:#E6DDFF; --sel-fg:#1B1728;
   --checkA: rgba(50,30,110,.06);
@@ -48,15 +48,15 @@
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
     --main:#A58CFF; --main-deep:#C9B8FF; --gold:#8E6CFF; --cyan:#4FA8E8;
-    --canvas:#1A1726; --surface:#221E31; --surface-soft:#100E18;
-    --line:#2E2942; --line-strong:#443D5E;
-    --ink:#EFEBFA; --slate:#BEB6D8; --steel:#9A92B6; --stone-solid:#6F6889;
+    --canvas:#161920; --surface:#1D2129; --surface-soft:#0B0D11;
+    --line:#2A2F38; --line-strong:#3E4451;
+    --ink:#ECEEF2; --slate:#BAC0CB; --steel:#9199A6; --stone-solid:#6F7784;
     --warn:#E8963C;
-    --glass-face: rgba(24,21,36,.72);
-    --glass-face-2: rgba(24,21,36,.58);
+    --glass-face: rgba(20,23,29,.74);
+    --glass-face-2: rgba(20,23,29,.58);
     --glass-hairline: rgba(255,255,255,.10);
-    --glass-rim: inset 0 1px 0 rgba(255,255,255,.10);
-    --glass-sheen: rgba(255,255,255,.06);
+    --glass-rim: inset 0 1px 0 rgba(255,255,255,.18), inset 0 0 0 .5px rgba(255,255,255,.06), 0 0 0 .5px rgba(0,0,0,.45);
+    --glass-sheen: rgba(255,255,255,.05);
     --glass-drop: 0 24px 48px -28px rgba(0,0,0,.7), 0 2px 8px -4px rgba(0,0,0,.4);
     --focus: 0 0 0 3px rgba(165,140,255,.38);
     --sel-bg:#3A2F66; --sel-fg:#F3EFFF;
@@ -66,15 +66,15 @@
 }
 :root[data-theme="dark"]{
   --main:#A58CFF; --main-deep:#C9B8FF; --gold:#8E6CFF; --cyan:#4FA8E8;
-  --canvas:#1A1726; --surface:#221E31; --surface-soft:#100E18;
-  --line:#2E2942; --line-strong:#443D5E;
-  --ink:#EFEBFA; --slate:#BEB6D8; --steel:#9A92B6; --stone-solid:#6F6889;
+  --canvas:#161920; --surface:#1D2129; --surface-soft:#0B0D11;
+  --line:#2A2F38; --line-strong:#3E4451;
+  --ink:#ECEEF2; --slate:#BAC0CB; --steel:#9199A6; --stone-solid:#6F7784;
   --warn:#E8963C;
-  --glass-face: rgba(24,21,36,.72);
-  --glass-face-2: rgba(24,21,36,.58);
+  --glass-face: rgba(20,23,29,.74);
+  --glass-face-2: rgba(20,23,29,.58);
   --glass-hairline: rgba(255,255,255,.10);
-  --glass-rim: inset 0 1px 0 rgba(255,255,255,.10);
-  --glass-sheen: rgba(255,255,255,.06);
+  --glass-rim: inset 0 1px 0 rgba(255,255,255,.18), inset 0 0 0 .5px rgba(255,255,255,.06), 0 0 0 .5px rgba(0,0,0,.45);
+  --glass-sheen: rgba(255,255,255,.05);
   --glass-drop: 0 24px 48px -28px rgba(0,0,0,.7), 0 2px 8px -4px rgba(0,0,0,.4);
   --focus: 0 0 0 3px rgba(165,140,255,.38);
   --sel-bg:#3A2F66; --sel-fg:#F3EFFF;
