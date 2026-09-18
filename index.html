@@ -168,7 +168,9 @@ header p{margin:0;color:var(--steel);font-size:12.5px}
     linear-gradient(180deg,color-mix(in srgb,var(--canvas) 66%,transparent),color-mix(in srgb,var(--canvas) 46%,transparent));
   background-size:20px 20px,20px 20px,auto; background-position:0 0,10px 10px,0 0;
 }
-#preview{width:auto; height:auto; max-width:min(100%,400px); max-height:min(68vh,820px); display:block}
+/* 높이를 기준으로 맞춥니다 — 세로로 긴 바형은 높이에 먼저 묶이고, 가로로 넓은 기기(듀오·폴드 안쪽)만
+   폭 한도에 걸립니다. 폭 한도가 좁으면 넓은 기기만 작아 보여 넉넉히 두되 판을 다 채우지는 않게 합니다 */
+#preview{width:auto; height:auto; max-width:min(100%,720px); max-height:min(68vh,820px); display:block}
 /* 폰 자체가 첨부 단추. 말풍선은 폰 화면 한가운데(캔버스 가운데 = 화면 가운데)에 뜬다 */
 .phonewrap{position:relative; display:flex; justify-content:center; max-width:100%; cursor:pointer;
   touch-action:manipulation; -webkit-user-select:none; user-select:none; border-radius:24px; outline:none}
@@ -366,7 +368,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--main);cursor:poin
   .work{grid-template-columns:minmax(0,1fr); gap:12px; padding:12px}
   .credit{padding:4px 14px calc(88px + env(safe-area-inset-bottom))}
   .stage{min-height:0; padding:14px 12px; gap:12px}
-  #preview{max-width:min(100%,300px); max-height:52dvh}
+  #preview{max-width:min(100%,460px); max-height:52dvh}
   .rail{position:static; max-height:none; overflow:visible; padding-bottom:4px}
   .grp{padding:14px 16px}
   .btn,.seg button,select{min-height:44px}
@@ -1635,7 +1637,7 @@ async function render(){
     if(token!==renderToken) return;
     const out=outputSize(devFor(img&&img.naturalWidth, img&&img.naturalHeight));
     $("outSize").textContent=`${out.w} × ${out.h} px`;
-    const previewW=Math.min(out.w, 760), f=previewW/out.w;          // 판째로 줄여 미리 본다
+    const previewW=Math.min(out.w, 1100), f=previewW/out.w;         // 판째로 줄여 미리 본다(화면 폭보다 넉넉해야 또렷하다)
     const pOut={...out, w:previewW, h:Math.round(out.h*f), scale:out.scale*f,
                 offX:(out.offX||0)*f, offY:(out.offY||0)*f};
     return compose(cv,img,pOut);
