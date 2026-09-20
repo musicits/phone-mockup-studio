@@ -206,6 +206,18 @@ header p{margin:0;color:var(--steel);font-size:12.5px}
   flex:0 0 auto; position:relative; width:46px; height:82px; border-radius:8px; overflow:hidden;
   border:2px solid transparent; background:var(--surface); cursor:pointer; padding:0;
 }
+/* 썸네일에서 한 장만 빼는 단추. 평소엔 흐리게 있다가 손이 닿으면 또렷해진다. */
+.thumb .drop{
+  position:absolute; top:2px; right:2px; width:18px; height:18px; padding:0; line-height:1;
+  border:0; border-radius:999px; cursor:pointer; font-size:12px; font-weight:700;
+  color:#fff; background:rgba(16,18,24,.55); opacity:.6;
+}
+.thumb .drop:hover, .thumb .drop:focus-visible{ opacity:1; background:rgba(200,40,40,.92) }
+/* 영상은 썸네일 왼쪽 아래에 표시를 단다 */
+.thumb .vtag{
+  position:absolute; left:2px; bottom:2px; padding:0 4px; border-radius:4px;
+  font-size:9px; font-weight:700; color:#fff; background:rgba(16,18,24,.62);
+}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .thumb[aria-current="true"]{border-color:var(--main)}
 .thumb .num{
@@ -556,6 +568,22 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--main);cursor:poin
           <option value="webm">WebM · 네이버 블로그</option>
           <option value="mp4">MP4 · 어디서나</option>
           <option value="gif">GIF · 짧은 반복</option>
+        </select>
+      </div>
+      <div class="row" id="gifRow" hidden>
+        <label class="sr" for="gifq">GIF 화질</label>
+        <select id="gifq" style="flex:1">
+          <option value="low">낮게 · 320px 8컷</option>
+          <option value="mid" selected>보통 · 480px 10컷</option>
+          <option value="high">높게 · 640px 15컷</option>
+        </select>
+        <label class="sr" for="giflen">GIF 길이</label>
+        <select id="giflen" style="flex:1">
+          <option value="5">앞 5초</option>
+          <option value="10" selected>앞 10초</option>
+          <option value="15">앞 15초</option>
+          <option value="20">앞 20초</option>
+          <option value="0">전체</option>
         </select>
       </div>
       <div class="row" style="margin-top:12px">
@@ -1722,6 +1750,7 @@ async function addFiles(files){
   if(!list.length) return;
   const start=S.shots.length;
   const vids=list.filter(isVideoFile).length;
+  const skipped=[];
   setStatus(vids? `${list.length}개 불러오는 중…` : `이미지 ${list.length}장 불러오는 중…`);
   for(const file of list){
     try{
@@ -1734,19 +1763,37 @@ async function addFiles(files){
                 thumb:c.toDataURL("image/jpeg",0.7)};
       });
       S.shots.push({file, name:file.name, video:isVideoFile(file), ...meta});
-    }catch(e){ /* 열 수 없는 파일은 건너뜀 */ }
+    }catch(e){ skipped.push(file.name); }
   }
   if(S.shots.length>start) S.idx=start;
-  setStatus(`${S.shots.length}장 준비 완료`);
+  if(skipped.length){
+    const mov=skipped.some(n=>/\.(mov|qt)$/i.test(n));
+    setStatus(mov
+      ? `${skipped.length}개를 열지 못했습니다. 크롬은 MOV 를 못 엽니다. 아이폰이나 맥의 사파리에서 이 도구를 열면 그대로 됩니다.`
+      : `${skipped.length}개를 열지 못했습니다: ${skipped.slice(0,3).join(", ")}`);
+  }
+  else setStatus(`${S.shots.length}장 준비 완료`);
+  refreshShots(); render();
+}
+/* 한 장만 뺀다. 보고 있던 장이 빠지면 그 자리를 이어받는다. */
+function removeShot(i){
+  if(busy) return;
+  S.shots.splice(i,1);
+  if(S.idx>=S.shots.length) S.idx=Math.max(0,S.shots.length-1);
+  setStatus(S.shots.length? `${S.shots.length}장 남았습니다` : "모두 비웠습니다");
   refreshShots(); render();
 }
 function refreshShots(){
   const n=S.shots.length;
-  $("count").textContent = n ? `${n}장 불러옴 · 썸네일을 눌러 전환` : "불러온 이미지 없음";
+  const nv=S.shots.filter(x=>x.video).length;
+  $("count").textContent = n
+    ? (nv? `${n}개 불러옴 (영상 ${nv}) · 눌러서 전환, × 로 빼기` : `${n}장 불러옴 · 눌러서 전환, × 로 빼기`)
+    : "불러온 파일 없음";
   $("clearRow").hidden = n===0;
   const cur=S.shots[S.idx], isVid=!!(cur&&cur.video);
   const stills=S.shots.filter(x=>!x.video).length;
   $("vfmtRow").hidden = !isVid;
+  $("gifRow").hidden = !isVid || $("vfmt").value!=="gif";
   $("saveOne").disabled = n===0;
   $("saveOne").textContent = isVid ? "영상 저장" : "현재 장 저장";
   // 전체 저장은 이미지만 묶습니다. 영상은 한 편씩 뽑습니다.
@@ -1757,13 +1804,23 @@ function refreshShots(){
   const strip=$("strip");
   strip.textContent="";
   S.shots.forEach((s,i)=>{
-    const b=document.createElement("button");
-    b.className="thumb"; b.type="button";
+    const b=document.createElement("div");
+    b.className="thumb";
     b.setAttribute("aria-current", i===S.idx?"true":"false");
     b.title=`${i+1}. ${s.name}`;
-    b.setAttribute("aria-label", `${i+1}번째 스크린샷 ${s.name}`);
-    b.innerHTML=`<img src="${s.thumb}" alt=""><span class="num">${i+1}</span>`;
-    b.onclick=()=>{ S.idx=i; refreshShots(); render(); };
+    const pick=document.createElement("button");
+    pick.type="button"; pick.style.cssText="position:absolute;inset:0;padding:0;border:0;background:none;cursor:pointer";
+    pick.setAttribute("aria-label", `${i+1}번째 ${s.video?"영상":"스크린샷"} ${s.name}`);
+    pick.onclick=()=>{ S.idx=i; refreshShots(); render(); };
+    b.innerHTML=`<img src="${s.thumb}" alt=""><span class="num">${i+1}</span>`
+      + (s.video? `<span class="vtag">영상</span>` : "");
+    b.appendChild(pick);
+    const drop=document.createElement("button");
+    drop.type="button"; drop.className="drop"; drop.textContent="×";
+    drop.title="이 장 빼기";
+    drop.setAttribute("aria-label", `${i+1}번째 빼기`);
+    drop.onclick=e=>{ e.stopPropagation(); removeShot(i); };
+    b.appendChild(drop);
     strip.appendChild(b);
   });
 }
@@ -2003,10 +2060,16 @@ async function exportVideo(fmt){
     const tick=async()=>{
       if(rec.state!=="recording") return;
       if(!drawing){ drawing=true; try{ await compose(cv, v, rOut); } finally{ drawing=false; } }
-      if(total) progress(Math.min(v.currentTime,total), total);
+      if(total){
+        progress(Math.min(v.currentTime,total), total);
+        const left=Math.max(0, Math.ceil(total - v.currentTime));
+        setStatus(`영상 녹화 중… ${left}초 남음 (영상 길이만큼 걸립니다)`);
+      }
       requestAnimationFrame(tick);
     };
-    setStatus(`영상 녹화 중… ${total? Math.round(total)+"초" : ""}`);
+    setStatus(total
+      ? `영상 녹화 중… ${Math.ceil(total)}초 남음 (영상 길이만큼 걸립니다)`
+      : "영상 녹화 중…");
     $("bar").hidden=false;
     rec.start();
     tick();
@@ -2028,7 +2091,12 @@ async function exportVideo(fmt){
 
 /* GIF 는 프레임을 한 장씩 모아 인코딩한다. 색이 256개뿐이고 용량이 커서
    가로 480px · 10fps · 최대 10초로 끊는다. */
-const GIF_W=480, GIF_FPS=10, GIF_MAX_SEC=10;
+const GIF_PRESET={ low:{w:320,fps:8}, mid:{w:480,fps:10}, high:{w:640,fps:15} };
+function gifSetting(){
+  const q=GIF_PRESET[$("gifq").value] || GIF_PRESET.mid;
+  const sec=parseInt($("giflen").value,10);
+  return {...q, sec: sec>0 ? sec : Infinity};
+}
 async function exportGif(shot){
   busy=true; $("saveOne").disabled=true; $("saveAll").disabled=true; $("dockSave").disabled=true;
   stopPreviewVideo();
@@ -2036,15 +2104,16 @@ async function exportGif(shot){
   try{
     v=await openVideo(shot.file);
     v.muted=true; v.loop=false;
+    const g=gifSetting();
     const base=outputSize(devFor(mediaW(v), mediaH(v)));
-    const f=Math.min(1, GIF_W/base.w);
+    const f=Math.min(1, g.w/base.w);
     const gOut={...base, w:Math.round(base.w*f), h:Math.round(base.h*f), scale:base.scale*f,
                 offX:(base.offX||0)*f, offY:(base.offY||0)*f};
     const cv=document.createElement("canvas");
     await compose(cv, v, gOut);
     const w=cv.width, h=cv.height, ctx=cv.getContext("2d");
-    const dur=Math.min(v.duration||0, GIF_MAX_SEC);
-    const count=Math.max(1, Math.round(dur*GIF_FPS));
+    const dur=Math.min(v.duration||0, g.sec);
+    const count=Math.max(1, Math.round(dur*g.fps));
     const frames=[];
     $("bar").hidden=false;
     for(let i=0;i<count;i++){
@@ -2059,11 +2128,11 @@ async function exportGif(shot){
     setStatus("GIF 색을 고르는 중…");
     progress(count+1, count+2);
     await new Promise(r=>setTimeout(r,16));
-    const bytes=gifBytes(frames, w, h, Math.round(100/GIF_FPS));
+    const bytes=gifBytes(frames, w, h, Math.round(100/g.fps));
     const blob=new Blob([bytes],{type:"image/gif"});
     await saveBlob(videoName("gif"), blob);
-    setStatus(`GIF 로 저장했습니다. ${(blob.size/1048576).toFixed(1)}MB · ${count}프레임`
-      + (v.duration>GIF_MAX_SEC? ` (앞 ${GIF_MAX_SEC}초만 담았습니다)` : ""));
+    setStatus(`GIF 로 저장했습니다. ${(blob.size/1048576).toFixed(1)}MB · ${count}컷 · ${w}px`
+      + (v.duration>g.sec? ` (앞 ${g.sec}초만 담았습니다)` : ""));
   }catch(err){
     setStatus("GIF 를 만들지 못했습니다. "+(err&&err.message||""));
   }finally{
@@ -2247,6 +2316,7 @@ $("width").onchange=e=>{ S.width=e.target.value; saveCfg(); render(); };
 $("pick").onclick=()=>$("file").click();
 $("file").onchange=e=>{ addFiles(e.target.files); e.target.value=""; };
 $("clear").onclick=()=>{ S.shots=[]; S.idx=0; setStatus(""); refreshShots(); render(); };
+$("vfmt").onchange=()=>{ $("gifRow").hidden = $("vfmt").value!=="gif"; };
 $("saveOne").onclick=()=>{
   const cur=S.shots[S.idx];
   if(cur&&cur.video) exportVideo($("vfmt").value);
