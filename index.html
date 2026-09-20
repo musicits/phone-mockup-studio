@@ -427,7 +427,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--main);cursor:poin
     <div class="grp">
       <h2>스크린샷</h2>
       <button class="btn wide" id="pick">파일 선택</button>
-      <input type="file" id="file" accept="image/*" multiple hidden>
+      <input type="file" id="file" accept="image/*,video/*" multiple hidden>
       <p class="hint" id="count">불러온 이미지 없음</p>
       <div class="row" id="clearRow" hidden>
         <button class="btn" id="clear" style="width:100%">전체 비우기</button>
@@ -549,6 +549,14 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--main);cursor:poin
       </div>
       <div class="readout">
         <span>최종 크기</span><b class="mono" id="outSize">—</b>
+      </div>
+      <div class="row" id="vfmtRow" hidden style="margin-top:12px">
+        <label class="sr" for="vfmt">영상 저장 형식</label>
+        <select id="vfmt" style="flex:1">
+          <option value="webm">WebM · 네이버 블로그</option>
+          <option value="mp4">MP4 · 어디서나</option>
+          <option value="gif">GIF · 짧은 반복</option>
+        </select>
       </div>
       <div class="row" style="margin-top:12px">
         <button class="btn primary" id="saveOne" style="flex:1" disabled>현재 장 저장</button>
@@ -1484,11 +1492,33 @@ function loadImage(src){
     img.src=src;
   });
 }
+/* 영상도 캔버스에 그대로 그릴 수 있다. 첫 프레임이 준비될 때까지 기다린다. */
+function loadVideo(src){
+  return new Promise((res,rej)=>{
+    const v=document.createElement("video");
+    v.muted=true; v.playsInline=true; v.preload="auto"; v.crossOrigin="anonymous";
+    v.onloadeddata=()=>res(v);
+    v.onerror=()=>rej(new Error("영상을 열 수 없습니다"));
+    v.src=src;
+  });
+}
+const isVideoFile=f=>!!f&&(f.type||"").startsWith("video/");
+/* 이미지든 영상이든 같은 이름으로 크기를 읽는다. */
+const mediaW=el=>el?(el.naturalWidth||el.videoWidth||0):0;
+const mediaH=el=>el?(el.naturalHeight||el.videoHeight||0):0;
 async function withFile(file,fn){
   const url=URL.createObjectURL(file);
-  try{ return await fn(await loadImage(url)); }
+  try{ return await fn(isVideoFile(file)? await loadVideo(url) : await loadImage(url)); }
   finally{ URL.revokeObjectURL(url); }
 }
+/* 미리보기와 녹화는 같은 영상 요소를 오래 붙잡고 있어야 해서 따로 연다. */
+async function openVideo(file){
+  const url=URL.createObjectURL(file);
+  const v=await loadVideo(url);
+  v.__url=url;
+  return v;
+}
+function closeVideo(v){ if(v&&v.__url){ try{ v.pause(); }catch(e){} URL.revokeObjectURL(v.__url); v.__url=null; } }
 const frameCache=new Map();
 async function frameImage(d, own=false){
   const key=`${d.slug}|${S.color}|${S.sheen}|${own}`;
@@ -1611,7 +1641,7 @@ async function compose(canvas, shotImg, out){
     rr(ctx,sx,sy,sw,sh,U(d.screen.r));
     ctx.clip();
     if(S.fit==="contain"){ ctx.fillStyle=S.letter; ctx.fillRect(sx,sy,sw,sh); }
-    const ar=shotImg.naturalWidth/shotImg.naturalHeight, target=sw/sh;
+    const ar=mediaW(shotImg)/mediaH(shotImg), target=sw/sh;
     let dw,dh;
     if(S.fit==="cover" ? ar>target : ar<target){ dh=sh; dw=sh*ar; }
     else { dw=sw; dh=sw/ar; }
@@ -1634,6 +1664,12 @@ async function compose(canvas, shotImg, out){
 
 /* ── 미리보기 ─────────────────────────────────────────────────── */
 let renderToken=0;
+/* 미리보기로 재생 중인 영상. 화면을 바꿀 때마다 닫고 다시 연다. */
+let previewVid=null, previewLoop=0, previewBusy=false;
+function stopPreviewVideo(){
+  if(previewLoop){ cancelAnimationFrame(previewLoop); previewLoop=0; }
+  if(previewVid){ closeVideo(previewVid); previewVid=null; }
+}
 async function render(){
   const token=++renderToken;
   const shot=S.shots[S.idx];
@@ -1641,14 +1677,29 @@ async function render(){
   // 폴드는 사진마다 커버·안쪽 프레임이 달라 출력 크기도 사진을 연 뒤에 잰다
   const draw = img => {
     if(token!==renderToken) return;
-    const out=outputSize(devFor(img&&img.naturalWidth, img&&img.naturalHeight));
+    const out=outputSize(devFor(mediaW(img), mediaH(img)));
     $("outSize").textContent=`${out.w} × ${out.h} px`;
     const previewW=Math.min(out.w, 1100), f=previewW/out.w;         // 판째로 줄여 미리 본다(화면 폭보다 넉넉해야 또렷하다)
     const pOut={...out, w:previewW, h:Math.round(out.h*f), scale:out.scale*f,
                 offX:(out.offX||0)*f, offY:(out.offY||0)*f};
     return compose(cv,img,pOut);
   };
-  if(shot) await withFile(shot.file, draw); else await draw(null);
+  stopPreviewVideo();
+  if(shot&&shot.video){
+    // 영상은 파일을 붙잡아 둔 채로 매 프레임 다시 그린다.
+    previewVid=await openVideo(shot.file);
+    if(token!==renderToken){ closeVideo(previewVid); previewVid=null; return; }
+    previewVid.loop=true; previewVid.muted=true;
+    try{ await previewVid.play(); }catch(e){}
+    const tick=async()=>{
+      if(token!==renderToken) return;
+      if(!previewBusy){ previewBusy=true; try{ await draw(previewVid); } finally{ previewBusy=false; } }
+      previewLoop=requestAnimationFrame(tick);
+    };
+    await tick();
+  }
+  else if(shot) await withFile(shot.file, draw);
+  else await draw(null);
   if(token!==renderToken) return;
 
   cv.hidden=false; $("empty").hidden=S.shots.length>0;
@@ -1667,20 +1718,22 @@ function checkAspect(shot){
 
 /* ── 파일 처리 ─────────────────────────────────────────────────── */
 async function addFiles(files){
-  const list=[...files].filter(f=>f.type.startsWith("image/"));
+  const list=[...files].filter(f=>f.type.startsWith("image/")||f.type.startsWith("video/"));
   if(!list.length) return;
   const start=S.shots.length;
-  setStatus(`이미지 ${list.length}장 불러오는 중…`);
+  const vids=list.filter(isVideoFile).length;
+  setStatus(vids? `${list.length}개 불러오는 중…` : `이미지 ${list.length}장 불러오는 중…`);
   for(const file of list){
     try{
-      const meta=await withFile(file, img=>{
+      const meta=await withFile(file, el=>{
         const c=document.createElement("canvas");
-        const h=92, w=Math.max(1,Math.round(h*img.naturalWidth/img.naturalHeight));
+        const h=92, w=Math.max(1,Math.round(h*mediaW(el)/mediaH(el)));
         c.width=w; c.height=h;
-        c.getContext("2d").drawImage(img,0,0,w,h);
-        return {w:img.naturalWidth, h:img.naturalHeight, thumb:c.toDataURL("image/jpeg",0.7)};
+        c.getContext("2d").drawImage(el,0,0,w,h);
+        return {w:mediaW(el), h:mediaH(el), dur:el.duration||0,
+                thumb:c.toDataURL("image/jpeg",0.7)};
       });
-      S.shots.push({file, name:file.name, ...meta});
+      S.shots.push({file, name:file.name, video:isVideoFile(file), ...meta});
     }catch(e){ /* 열 수 없는 파일은 건너뜀 */ }
   }
   if(S.shots.length>start) S.idx=start;
@@ -1691,11 +1744,16 @@ function refreshShots(){
   const n=S.shots.length;
   $("count").textContent = n ? `${n}장 불러옴 · 썸네일을 눌러 전환` : "불러온 이미지 없음";
   $("clearRow").hidden = n===0;
+  const cur=S.shots[S.idx], isVid=!!(cur&&cur.video);
+  const stills=S.shots.filter(x=>!x.video).length;
+  $("vfmtRow").hidden = !isVid;
   $("saveOne").disabled = n===0;
-  $("saveAll").disabled = n===0;
-  $("saveAll").textContent = n>1 ? `전체 저장 (${n}장)` : "전체 저장";
+  $("saveOne").textContent = isVid ? "영상 저장" : "현재 장 저장";
+  // 전체 저장은 이미지만 묶습니다. 영상은 한 편씩 뽑습니다.
+  $("saveAll").disabled = stills===0;
+  $("saveAll").textContent = stills>1 ? `이미지 전체 저장 (${stills}장)` : "전체 저장";
   $("dockSave").disabled = n===0;
-  $("dockSave").textContent = n>1 ? `전체 저장 (${n}장)` : "저장";
+  $("dockSave").textContent = isVid ? "영상 저장" : (n>1 ? `전체 저장 (${n}장)` : "저장");
   const strip=$("strip");
   strip.textContent="";
   S.shots.forEach((s,i)=>{
@@ -1720,6 +1778,13 @@ async function downloads(){
 }
 function canvasBlob(cv){
   return new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error("이미지를 만들지 못했습니다")),"image/png"));
+}
+/* 네이버 블로그는 한글·특수문자 파일명에서 오류가 날 수 있다고 안내한다.
+   영상은 블로그에 바로 올리는 쓰임이라 영문과 숫자로만 짓는다. */
+function videoName(fmt){
+  const d=dev();
+  const stamp=new Date().toISOString().slice(0,10).replace(/-/g,"");
+  return `mockup-${d.slug}-${S.color}-${stamp}.${fmt}`.replace(/[^\w.-]/g,"-").toLowerCase();
 }
 function outName(shot,i){
   const base=(shot?shot.name:"mockup").replace(/\.[^.]+$/,"").slice(0,60) || `mockup-${i+1}`;
@@ -1790,6 +1855,224 @@ async function renderAll(indices, cv, out){
   return items;
 }
 
+/* ── GIF 만들기 ────────────────────────────────────────────────
+   GIF 는 한 장에 256색까지만 담는다. 그래서 프레임을 모아 쓰이는 색을
+   세고, 많이 쓰인 쪽부터 상자를 갈라 256색 팔레트를 뽑는다(메디안 컷).
+   그 다음 표준 LZW 로 눌러 붙인다. 바깥 라이브러리를 쓰지 않는다. */
+function medianCut(pixels, depth){
+  // pixels: [[r,g,b], ...] 표본. depth 8 이면 256칸.
+  let boxes=[pixels];
+  for(let d=0; d<depth; d++){
+    const next=[];
+    for(const box of boxes){
+      if(box.length<2){ next.push(box); continue; }
+      let lo=[255,255,255], hi=[0,0,0];
+      for(const q of box) for(let c=0;c<3;c++){ if(q[c]<lo[c])lo[c]=q[c]; if(q[c]>hi[c])hi[c]=q[c]; }
+      let ch=0, span=-1;
+      for(let c=0;c<3;c++){ if(hi[c]-lo[c]>span){ span=hi[c]-lo[c]; ch=c; } }
+      box.sort((a,b)=>a[ch]-b[ch]);
+      const mid=box.length>>1;
+      next.push(box.slice(0,mid), box.slice(mid));
+    }
+    boxes=next;
+  }
+  return boxes.filter(b=>b.length).map(box=>{
+    let r=0,g=0,b=0;
+    for(const q of box){ r+=q[0]; g+=q[1]; b+=q[2]; }
+    const n=box.length;
+    return [Math.round(r/n), Math.round(g/n), Math.round(b/n)];
+  });
+}
+function buildPalette(frames, w, h){
+  const step=Math.max(1, Math.floor((w*h)/4000));   // 한 프레임에서 4천 점만 표본으로
+  const sample=[];
+  for(const data of frames){
+    for(let i=0;i<w*h;i+=step) sample.push([data[i*4], data[i*4+1], data[i*4+2]]);
+  }
+  let pal=medianCut(sample, 8);
+  while(pal.length<256) pal.push([0,0,0]);
+  return pal.slice(0,256);
+}
+/* 팔레트에서 가장 가까운 색. 한 번 찾은 색은 기억해 둔다. */
+function makeMapper(pal){
+  const cache=new Map();
+  return (r,g,b)=>{
+    const key=(r>>2<<12)|(g>>2<<6)|(b>>2);
+    const hit=cache.get(key);
+    if(hit!==undefined) return hit;
+    let best=0, bd=1e9;
+    for(let i=0;i<pal.length;i++){
+      const dr=r-pal[i][0], dg=g-pal[i][1], db=b-pal[i][2];
+      const d=dr*dr+dg*dg+db*db;
+      if(d<bd){ bd=d; best=i; if(!d) break; }
+    }
+    cache.set(key,best);
+    return best;
+  };
+}
+function lzwEncode(indices, minCode){
+  const out=[], clear=1<<minCode, eoi=clear+1;
+  let size=minCode+1, next=eoi+1, dict=new Map(), cur=0, bits=0;
+  const push=code=>{
+    cur |= code<<bits; bits += size;
+    while(bits>=8){ out.push(cur&255); cur>>=8; bits-=8; }
+  };
+  const reset=()=>{ dict=new Map(); next=eoi+1; size=minCode+1; };
+  push(clear); reset();
+  let prev=indices[0];
+  for(let i=1;i<indices.length;i++){
+    const k=indices[i], key=prev*4096+k, found=dict.get(key);
+    if(found!==undefined){ prev=found; continue; }
+    push(prev);
+    dict.set(key, next);
+    if(next < 4096){ if(next === (1<<size) && size < 12) size++; next++; }
+    else { push(clear); reset(); }
+    prev=k;
+  }
+  push(prev); push(eoi);
+  if(bits>0) out.push(cur&255);
+  return out;
+}
+function gifBytes(frames, w, h, delayCs){
+  const pal=buildPalette(frames, w, h), map=makeMapper(pal);
+  const b=[], put=n=>b.push(n&255), put2=n=>{ put(n); put(n>>8); };
+  const str=t=>{ for(let i=0;i<t.length;i++) put(t.charCodeAt(i)); };
+  str("GIF89a"); put2(w); put2(h); put(0xF7); put(0); put(0);
+  for(const c of pal){ put(c[0]); put(c[1]); put(c[2]); }
+  str("!"); put(0xFF); put(11); str("NETSCAPE2.0"); put(3); put(1); put2(0); put(0);
+  for(const data of frames){
+    str("!"); put(0xF9); put(4); put(0); put2(delayCs); put(0); put(0);
+    str(","); put2(0); put2(0); put2(w); put2(h); put(0);
+    const idx=new Uint8Array(w*h);
+    for(let i=0;i<w*h;i++) idx[i]=map(data[i*4], data[i*4+1], data[i*4+2]);
+    put(8);
+    const bytes=lzwEncode(idx, 8);
+    for(let i=0;i<bytes.length;i+=255){
+      const part=bytes.slice(i, i+255);
+      put(part.length);
+      for(const x of part) put(x);
+    }
+    put(0);
+  }
+  str(";");
+  return new Uint8Array(b);
+}
+
+/* ── 영상 저장 ─────────────────────────────────────────────────
+   목업을 캔버스에 매 프레임 다시 그리면서 그 캔버스를 그대로 녹화한다.
+   실제 재생 속도로 진행되므로 20초 영상이면 뽑는 데도 20초 걸린다. */
+function pickMime(list){ return list.find(m=>{ try{ return MediaRecorder.isTypeSupported(m); }catch(e){ return false; } }) || ""; }
+const VIDEO_MIME={
+  webm:["video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"],
+  mp4 :["video/mp4;codecs=avc1.42E01E","video/mp4;codecs=avc1","video/mp4"],
+};
+/* 녹화 판 크기. 너무 크면 프레임을 놓치므로 가로 1080 안쪽으로 줄인다. */
+function recordSize(el){
+  const out=outputSize(devFor(mediaW(el), mediaH(el)));
+  const w=Math.min(out.w, 1080), f=w/out.w;
+  return {...out, w:Math.round(out.w*f), h:Math.round(out.h*f), scale:out.scale*f,
+          offX:(out.offX||0)*f, offY:(out.offY||0)*f};
+}
+async function exportVideo(fmt){
+  if(busy) return;
+  const shot=S.shots[S.idx];
+  if(!shot||!shot.video) return;
+  if(fmt==="gif") return await exportGif(shot);
+  const mime=pickMime(VIDEO_MIME[fmt]||[]);
+  if(!mime){
+    setStatus(fmt==="mp4" ? "이 브라우저는 MP4 로 뽑지 못합니다. WebM 으로 저장해 주세요."
+                          : "이 브라우저는 영상 저장을 지원하지 않습니다.");
+    return;
+  }
+  busy=true; $("saveOne").disabled=true; $("saveAll").disabled=true; $("dockSave").disabled=true;
+  stopPreviewVideo();
+  let v=null;
+  try{
+    v=await openVideo(shot.file);
+    v.loop=false; v.muted=true; v.currentTime=0;
+    const rOut=recordSize(v);
+    const cv=document.createElement("canvas");
+    await compose(cv, v, rOut);
+    const stream=cv.captureStream(30);
+    const rec=new MediaRecorder(stream,{mimeType:mime, videoBitsPerSecond:8_000_000});
+    const chunks=[];
+    rec.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
+    const done=new Promise(r=>{ rec.onstop=r; });
+    const total=v.duration||0;
+    let drawing=false;
+    const tick=async()=>{
+      if(rec.state!=="recording") return;
+      if(!drawing){ drawing=true; try{ await compose(cv, v, rOut); } finally{ drawing=false; } }
+      if(total) progress(Math.min(v.currentTime,total), total);
+      requestAnimationFrame(tick);
+    };
+    setStatus(`영상 녹화 중… ${total? Math.round(total)+"초" : ""}`);
+    $("bar").hidden=false;
+    rec.start();
+    tick();
+    await v.play();
+    await new Promise(r=>{ v.onended=r; });
+    rec.stop();
+    await done;
+    const blob=new Blob(chunks,{type:mime});
+    await saveBlob(videoName(fmt), blob);
+    setStatus(`${fmt.toUpperCase()} 로 저장했습니다. ${(blob.size/1048576).toFixed(1)}MB`);
+  }catch(err){
+    setStatus("영상을 저장하지 못했습니다. "+(err&&err.message||""));
+  }finally{
+    if(v) closeVideo(v);
+    $("bar").hidden=true;
+    busy=false; refreshShots(); render();
+  }
+}
+
+/* GIF 는 프레임을 한 장씩 모아 인코딩한다. 색이 256개뿐이고 용량이 커서
+   가로 480px · 10fps · 최대 10초로 끊는다. */
+const GIF_W=480, GIF_FPS=10, GIF_MAX_SEC=10;
+async function exportGif(shot){
+  busy=true; $("saveOne").disabled=true; $("saveAll").disabled=true; $("dockSave").disabled=true;
+  stopPreviewVideo();
+  let v=null;
+  try{
+    v=await openVideo(shot.file);
+    v.muted=true; v.loop=false;
+    const base=outputSize(devFor(mediaW(v), mediaH(v)));
+    const f=Math.min(1, GIF_W/base.w);
+    const gOut={...base, w:Math.round(base.w*f), h:Math.round(base.h*f), scale:base.scale*f,
+                offX:(base.offX||0)*f, offY:(base.offY||0)*f};
+    const cv=document.createElement("canvas");
+    await compose(cv, v, gOut);
+    const w=cv.width, h=cv.height, ctx=cv.getContext("2d");
+    const dur=Math.min(v.duration||0, GIF_MAX_SEC);
+    const count=Math.max(1, Math.round(dur*GIF_FPS));
+    const frames=[];
+    $("bar").hidden=false;
+    for(let i=0;i<count;i++){
+      const t=dur*i/count;
+      await new Promise(r=>{ v.onseeked=r; v.currentTime=t; });
+      await compose(cv, v, gOut);
+      frames.push(ctx.getImageData(0,0,w,h).data);
+      setStatus(`GIF 프레임 ${i+1}/${count} 모으는 중…`);
+      progress(i+1, count+2);
+      await new Promise(r=>setTimeout(r,0));
+    }
+    setStatus("GIF 색을 고르는 중…");
+    progress(count+1, count+2);
+    await new Promise(r=>setTimeout(r,16));
+    const bytes=gifBytes(frames, w, h, Math.round(100/GIF_FPS));
+    const blob=new Blob([bytes],{type:"image/gif"});
+    await saveBlob(videoName("gif"), blob);
+    setStatus(`GIF 로 저장했습니다. ${(blob.size/1048576).toFixed(1)}MB · ${count}프레임`
+      + (v.duration>GIF_MAX_SEC? ` (앞 ${GIF_MAX_SEC}초만 담았습니다)` : ""));
+  }catch(err){
+    setStatus("GIF 를 만들지 못했습니다. "+(err&&err.message||""));
+  }finally{
+    if(v) closeVideo(v);
+    $("bar").hidden=true;
+    busy=false; refreshShots(); render();
+  }
+}
+
 async function exportShots(indices){
   if(busy) return;
   busy=true; $("saveOne").disabled=true; $("saveAll").disabled=true; $("dockSave").disabled=true;
@@ -1818,7 +2101,7 @@ async function exportShots(indices){
       const shot=S.shots[i];
       setStatus(`${done+1}/${indices.length} 합성 중… ${shot.name}`);
       progress(done,indices.length);
-      await withFile(shot.file, img=>compose(cv,img,outputSize(devFor(img.naturalWidth,img.naturalHeight))));
+      await withFile(shot.file, img=>compose(cv,img,outputSize(devFor(mediaW(img),mediaH(img)))));
       const blob=await canvasBlob(cv);
       try{
         await saveBlob(outName(shot,i), blob);
@@ -1964,11 +2247,20 @@ $("width").onchange=e=>{ S.width=e.target.value; saveCfg(); render(); };
 $("pick").onclick=()=>$("file").click();
 $("file").onchange=e=>{ addFiles(e.target.files); e.target.value=""; };
 $("clear").onclick=()=>{ S.shots=[]; S.idx=0; setStatus(""); refreshShots(); render(); };
-$("saveOne").onclick=()=>exportShots([S.idx]);
-$("saveAll").onclick=()=>exportShots(S.shots.map((_,i)=>i));
+$("saveOne").onclick=()=>{
+  const cur=S.shots[S.idx];
+  if(cur&&cur.video) exportVideo($("vfmt").value);
+  else exportShots([S.idx]);
+};
+$("saveAll").onclick=()=>exportShots(S.shots.map((_,i)=>i).filter(i=>!S.shots[i].video));
 
 $("dockPick").onclick=()=>$("file").click();
-$("dockSave").onclick=()=>exportShots(S.shots.length>1 ? S.shots.map((_,i)=>i) : [S.idx]);
+$("dockSave").onclick=()=>{
+  const cur=S.shots[S.idx];
+  if(cur&&cur.video){ exportVideo($("vfmt").value); return; }
+  const stills=S.shots.map((_,i)=>i).filter(i=>!S.shots[i].video);
+  exportShots(stills.length>1 ? stills : [S.idx]);
+};
 $("sheetClose").onclick=closeResults;
 $("sheet").addEventListener("click",e=>{ if(e.target===$("sheet")) closeResults(); });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape" && !$("sheet").hidden) closeResults(); });
