@@ -570,6 +570,16 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--main);cursor:poin
           <option value="gif">GIF · 짧은 반복</option>
         </select>
       </div>
+      <div class="row" id="spdRow" hidden>
+        <label class="sr" for="spd">재생 속도</label>
+        <select id="spd" style="flex:1">
+          <option value="1" selected>원래 속도</option>
+          <option value="1.5">1.5배 빠르게</option>
+          <option value="2">2배 빠르게</option>
+          <option value="3">3배 빠르게</option>
+          <option value="4">4배 빠르게</option>
+        </select>
+      </div>
       <div class="row" id="gifRow" hidden>
         <label class="sr" for="gifq">GIF 화질</label>
         <select id="gifq" style="flex:1">
@@ -586,6 +596,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--main);cursor:poin
           <option value="0">전체</option>
         </select>
       </div>
+      <p class="hint" id="gifSize" hidden></p>
       <div class="row" style="margin-top:12px">
         <button class="btn primary" id="saveOne" style="flex:1" disabled>현재 장 저장</button>
       </div>
@@ -1775,6 +1786,12 @@ async function addFiles(files){
   else setStatus(`${S.shots.length}장 준비 완료`);
   refreshShots(); render();
 }
+/* 저장하는 동안 고르는 칸을 잠근다. 누른 형식과 화면에 보이는 형식이
+   달라지면 무엇이 저장되는지 알 수 없다. */
+function lockExport(on){
+  ["vfmt","gifq","giflen","spd"].forEach(id=>{ const el=$(id); if(el) el.disabled=on; });
+  document.querySelectorAll(".thumb .drop").forEach(b=>{ b.disabled=on; b.style.display=on?"none":""; });
+}
 /* 한 장만 뺀다. 보고 있던 장이 빠지면 그 자리를 이어받는다. */
 function removeShot(i){
   if(busy) return;
@@ -1793,7 +1810,9 @@ function refreshShots(){
   const cur=S.shots[S.idx], isVid=!!(cur&&cur.video);
   const stills=S.shots.filter(x=>!x.video).length;
   $("vfmtRow").hidden = !isVid;
+  $("spdRow").hidden = !isVid;
   $("gifRow").hidden = !isVid || $("vfmt").value!=="gif";
+  showGifSize();
   $("saveOne").disabled = n===0;
   $("saveOne").textContent = isVid ? "영상 저장" : "현재 장 저장";
   // 전체 저장은 이미지만 묶습니다. 영상은 한 편씩 뽑습니다.
@@ -2042,11 +2061,13 @@ async function exportVideo(fmt){
     return;
   }
   busy=true; $("saveOne").disabled=true; $("saveAll").disabled=true; $("dockSave").disabled=true;
+  lockExport(true);
   stopPreviewVideo();
   let v=null;
   try{
     v=await openVideo(shot.file);
     v.loop=false; v.muted=true; v.currentTime=0;
+    const sp=speed(); v.playbackRate=sp;
     const rOut=recordSize(v);
     const cv=document.createElement("canvas");
     await compose(cv, v, rOut);
@@ -2055,21 +2076,22 @@ async function exportVideo(fmt){
     const chunks=[];
     rec.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
     const done=new Promise(r=>{ rec.onstop=r; });
-    const total=v.duration||0;
+    const total=(v.duration||0)/sp;   // 배속만큼 빨리 끝난다
     let drawing=false;
     const tick=async()=>{
       if(rec.state!=="recording") return;
       if(!drawing){ drawing=true; try{ await compose(cv, v, rOut); } finally{ drawing=false; } }
       if(total){
-        progress(Math.min(v.currentTime,total), total);
-        const left=Math.max(0, Math.ceil(total - v.currentTime));
-        setStatus(`영상 녹화 중… ${left}초 남음 (영상 길이만큼 걸립니다)`);
+        const at=v.currentTime/sp;
+        progress(Math.min(at,total), total);
+        const left=Math.max(0, Math.ceil(total - at));
+        setStatus(`${fmt.toUpperCase()} 녹화 중… ${left}초 남음 (영상 길이만큼 걸립니다)`);
       }
       requestAnimationFrame(tick);
     };
     setStatus(total
-      ? `영상 녹화 중… ${Math.ceil(total)}초 남음 (영상 길이만큼 걸립니다)`
-      : "영상 녹화 중…");
+      ? `${fmt.toUpperCase()} 녹화 중… ${Math.ceil(total)}초 남음 (영상 길이만큼 걸립니다)`
+      : `${fmt.toUpperCase()} 녹화 중…`);
     $("bar").hidden=false;
     rec.start();
     tick();
@@ -2085,20 +2107,44 @@ async function exportVideo(fmt){
   }finally{
     if(v) closeVideo(v);
     $("bar").hidden=true;
-    busy=false; refreshShots(); render();
+    busy=false; lockExport(false); refreshShots(); render();
   }
 }
 
 /* GIF 는 프레임을 한 장씩 모아 인코딩한다. 색이 256개뿐이고 용량이 커서
    가로 480px · 10fps · 최대 10초로 끊는다. */
+const speed=()=>parseFloat($("spd").value)||1;
 const GIF_PRESET={ low:{w:320,fps:8}, mid:{w:480,fps:10}, high:{w:640,fps:15} };
 function gifSetting(){
   const q=GIF_PRESET[$("gifq").value] || GIF_PRESET.mid;
   const sec=parseInt($("giflen").value,10);
   return {...q, sec: sec>0 ? sec : Infinity};
 }
+/* 실제로 뽑아 본 결과에서 낸 어림값이다.
+   320px 0.080 · 480px 0.060 · 640px 0.055 B/픽셀. 화면이 단순하면 이보다
+   작고, 색이 많고 움직임이 크면 더 커진다. */
+const GIF_BPP={ low:0.080, mid:0.060, high:0.055 };
+function showGifSize(){
+  const el=$("gifSize"), cur=S.shots[S.idx];
+  if(!el) return;
+  if(!cur||!cur.video||$("vfmt").value!=="gif"){ el.hidden=true; return; }
+  const g=gifSetting(), key=$("gifq").value;
+  const base=outputSize(devFor(cur.w, cur.h));
+  const f=Math.min(1, g.w/base.w);
+  const w=Math.round(base.w*f), h=Math.round(base.h*f);
+  const sp=speed();
+  const src=Math.min(cur.dur||0, g.sec*sp);   // 원본에서 읽는 길이
+  const sec=src/sp;                            // 나오는 GIF 길이
+  const cuts=Math.max(1, Math.round(sec*g.fps));
+  const mb=w*h*cuts*(GIF_BPP[key]||0.06)/1048576;
+  el.hidden=false;
+  el.textContent=`예상 ${mb<1? Math.round(mb*1024)+"KB" : mb.toFixed(1)+"MB"} · ${w}×${h} · ${cuts}컷 · ${sec.toFixed(1)}초`
+    + (sp>1? ` · ${sp}배속` : "")
+    + (mb>8? " · 블로그에 올리기엔 무겁습니다" : "");
+}
 async function exportGif(shot){
   busy=true; $("saveOne").disabled=true; $("saveAll").disabled=true; $("dockSave").disabled=true;
+  lockExport(true);
   stopPreviewVideo();
   let v=null;
   try{
@@ -2112,33 +2158,51 @@ async function exportGif(shot){
     const cv=document.createElement("canvas");
     await compose(cv, v, gOut);
     const w=cv.width, h=cv.height, ctx=cv.getContext("2d");
-    const dur=Math.min(v.duration||0, g.sec);
-    const count=Math.max(1, Math.round(dur*g.fps));
+    const sp=speed();
+    const dur=Math.min(v.duration||0, g.sec*sp);   // 배속이면 그만큼 더 긴 구간이 담긴다
+    const count=Math.max(1, Math.round(dur/sp*g.fps));
     const frames=[];
     $("bar").hidden=false;
-    for(let i=0;i<count;i++){
-      const t=dur*i/count;
-      await new Promise(r=>{ v.onseeked=r; v.currentTime=t; });
-      await compose(cv, v, gOut);
-      frames.push(ctx.getImageData(0,0,w,h).data);
-      setStatus(`GIF 프레임 ${i+1}/${count} 모으는 중…`);
-      progress(i+1, count+2);
-      await new Promise(r=>setTimeout(r,0));
-    }
+    // 프레임마다 되감으면(seek) 한 장에 수십 ms 씩 기다린다. 대신 배속으로
+    // 재생하면서 지나가는 프레임을 주워 담는다. GIF 는 장면만 모으면 되니
+    // 빨리 읽어도 결과가 같다.
+    const targets=[]; for(let i=0;i<count;i++) targets.push(dur*i/count);
+    v.currentTime=0; v.playbackRate=Math.min(16, 4*sp);
+    await new Promise(r=>{ v.onseeked=r; v.currentTime=0; });
+    await v.play();
+    let next=0;
+    await new Promise(resolve=>{
+      const grab=async()=>{
+        while(next<targets.length && v.currentTime>=targets[next]){
+          await compose(cv, v, gOut);
+          frames.push(ctx.getImageData(0,0,w,h).data);
+          next++;
+          setStatus(`GIF 장면 ${next}/${count} 모으는 중…`);
+          progress(next, count+2);
+        }
+        if(next>=targets.length || v.ended) return resolve();
+        requestAnimationFrame(grab);
+      };
+      grab();
+    });
+    try{ v.pause(); }catch(e){}
+    // 배속이 빨라 놓친 자리는 마지막 장면으로 채운다.
+    while(frames.length<count && frames.length) frames.push(frames[frames.length-1]);
     setStatus("GIF 색을 고르는 중…");
     progress(count+1, count+2);
     await new Promise(r=>setTimeout(r,16));
-    const bytes=gifBytes(frames, w, h, Math.round(100/g.fps));
+    const bytes=gifBytes(frames, w, h, Math.max(2, Math.round(100/g.fps)));
     const blob=new Blob([bytes],{type:"image/gif"});
     await saveBlob(videoName("gif"), blob);
     setStatus(`GIF 로 저장했습니다. ${(blob.size/1048576).toFixed(1)}MB · ${count}컷 · ${w}px`
-      + (v.duration>g.sec? ` (앞 ${g.sec}초만 담았습니다)` : ""));
+      + (sp>1? ` · ${sp}배속` : "")
+      + (v.duration>dur? ` (앞 ${Math.round(dur)}초만 담았습니다)` : ""));
   }catch(err){
     setStatus("GIF 를 만들지 못했습니다. "+(err&&err.message||""));
   }finally{
     if(v) closeVideo(v);
     $("bar").hidden=true;
-    busy=false; refreshShots(); render();
+    busy=false; lockExport(false); refreshShots(); render();
   }
 }
 
@@ -2316,7 +2380,10 @@ $("width").onchange=e=>{ S.width=e.target.value; saveCfg(); render(); };
 $("pick").onclick=()=>$("file").click();
 $("file").onchange=e=>{ addFiles(e.target.files); e.target.value=""; };
 $("clear").onclick=()=>{ S.shots=[]; S.idx=0; setStatus(""); refreshShots(); render(); };
-$("vfmt").onchange=()=>{ $("gifRow").hidden = $("vfmt").value!=="gif"; };
+$("vfmt").onchange=()=>{ $("gifRow").hidden = $("vfmt").value!=="gif"; showGifSize(); };
+$("gifq").onchange=showGifSize;
+$("spd").onchange=showGifSize;
+$("giflen").onchange=showGifSize;
 $("saveOne").onclick=()=>{
   const cur=S.shots[S.idx];
   if(cur&&cur.video) exportVideo($("vfmt").value);
