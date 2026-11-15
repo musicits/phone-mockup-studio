@@ -456,6 +456,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--main);cursor:poin
       <div class="seg" id="brandSeg">
         <button type="button" data-v="apple">아이폰</button>
         <button type="button" data-v="samsung">갤럭시</button>
+        <button type="button" data-v="mac">맥북</button>
       </div>
       <div class="row">
         <label for="form">형태</label>
@@ -677,6 +678,13 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--main);cursor:poin
         </div>
       </details>
       <details>
+        <summary>맥 화면도 넣을 수 있나요?</summary>
+        <div class="ans">
+          <p>맥에서 <b>전체 화면 캡처</b>(<span class="mono">⇧⌘3</span>)를 메뉴 막대째로 넣으면 <b>맥북 프로 14</b>로 자동으로 바뀝니다. 메뉴 막대 가운데 위는 노치가 덮습니다.</p>
+          <p>14형 기본 해상도 <span class="mono">3024 × 1964</span> 캡처를 [가로 폭] › <b>원본 화질</b>로 저장하면 화면이 캡처와 1:1로 들어갑니다. 창 하나만 찍은 캡처는 비율이 달라 맞지 않습니다.</p>
+        </div>
+      </details>
+      <details>
         <summary>아래 테두리의 로고는 무엇인가요?</summary>
         <div class="ans">
           <p>이 도구를 만든 <b>music ITs</b>의 사인입니다. 모든 저장본의 아래 테두리 가운데에 작게 들어갑니다.</p>
@@ -762,6 +770,28 @@ function phone(o){
   return {...o, form:o.form||"bar", body, screen, vb:{x:-14,y:0,w:W+28,h:H},
     buttons:(o.btn||[]).map(([s,f,h])=>({s, y:Math.round(H*f), h})),
     frame(c,sheen,own){ return frameSVG(this,c,sheen,own); }};
+}
+
+/* ── 노트북 ── 정면에서 본 열린 맥북: 화면 덮개(lid) + 아래 본체(base).
+   맥북 프로 레티나는 254ppi 라 0.1mm 한 칸이 화면 1px 입니다. 그래서 화면 크기는 대각선으로
+   계산하지 않고 해상도를 그대로 칸 수로 씁니다 → [원본 화질]에서 캡처가 1:1 로 들어갑니다.
+   mm     덮개 가로(본체 가로와 같음)      top/chin  화면 위 베젤 · 아래 턱(칸)
+   r      덮개 위 모서리 반경                sr        화면 위 모서리 반경(아래는 직각)
+   deck   본체를 정면에서 본 가로(mm, 덮개보다 넓게)    base  본체 두께(칸)
+   notch  [가로, 세로](칸) — 메뉴 막대 가운데 위를 덮는다
+   뷰박스 가로는 100 단위로 올려 여백(6·13·22%)이 정수 px 로 떨어지게 합니다(원본 화질에서 화면이 반 px 밀리지 않게). */
+function laptop(o){
+  const m=o.modes[0], sw=m.w, sh=m.h;
+  const W=Math.round(o.mm[0]*10), BW=Math.round(o.deck*10);
+  const sx=Math.round((W-sw)/2), sy=o.top, H=sy+sh+o.chin;
+  const VW=Math.ceil((BW+20)/100)*100, bx=Math.round((W-BW)/2);
+  return {...o, form:"laptop", buttons:[],
+    cut:{type:"macnotch", w:o.notch[0], h:o.notch[1]},
+    body:{x:0,y:0,w:W,h:H,r:o.r},
+    base:{x:bx,y:H,w:BW,h:o.base},
+    screen:{x:sx,y:sy,w:sw,h:sh,r:o.sr,rb:0},
+    vb:{x:bx-(VW-BW)/2, y:0, w:VW, h:H+o.base},
+    frame(c,sheen){ return laptopSVG(this,c,sheen); }};
 }
 
 /* 해상도 한 개짜리 기기용 */
@@ -1248,11 +1278,24 @@ const DEVICES = {
     screens:["펼침","커버"],
     alt: phone({ name:"Galaxy Z Flip5", mm:[71.9,85.1], diag:3.4, r:110, sy:40, rail:26, modes:one(720,748),   // 접은 앞면 커버 3.4"
       cut:{type:"flexcam", d:118, off:30, gap:34, below:true}, btn:BTN_GALAXY })
+  }),
+
+  /* ── 맥북 — 전체 화면 캡처(메뉴 막대 포함)를 그대로 받는다. 14형 기본 해상도 3024 × 1964 ── */
+  mbp14: laptop({
+    brand:"mac", name:"MacBook Pro 14", series:"MacBook Pro", slug:"macbookpro14",
+    mm:[312.6], top:52, chin:126, r:118, sr:22, deck:348.0, base:112,
+    modes:[{id:"native", label:"3024 × 1964", w:3024, h:1964}],
+    notch:[376,64],                                  // 안전 영역 32pt(64px), 폭 약 188pt
+    colors:"mbp"
   })
 };
 
 /* 같은 색 구성을 쓰는 기기끼리 한 벌을 나눠 씁니다 */
 const PALETTES = {
+  "mbp":[
+    col("space-gray","스페이스 그레이","#7D7F82","#646669","#CDCFD2","#3D3F42","#7D7F82"),
+    col("silver",    "실버",          "#D7D9DB","#BCBFC2","#F8F9FA","#8E9195","#D7D9DB")
+  ],
   "duo":[
     col("star-white","스타 화이트","#E7E5E0","#C5C2BB","#FFFFFF","#95928B","#DAD7D0"),
     col("night-sky", "나이트 스카이","#2B3040","#1E222E","#8792A6","#11141C","#262B39")
@@ -1388,8 +1431,18 @@ Object.values(DEVICES).forEach(d=>{ if(d.alt) Object.assign(d.alt,{brand:d.brand
    '자동'이면 스크린샷 비율로 고른다 — 기본 쪽은 세로가 가로의 2.3배 넘게 길고, 다른 화면(폴드 안쪽·
    플립 앞면 커버)은 1.1~1.2배로 거의 정사각형이라 1.5 를 경계로 가른다. 경계가 다른 기기는 autoAr 로
    따로 준다(아이폰 듀오는 커버 1.46 · 안쪽 0.70 이라 1.0). 여러 장을 섞어도 한 장씩 고른다. */
+/* 맥 전체 화면 캡처는 가로:세로가 약 1.54 다(14형 3024×1964 · 16형 3456×2234 · 에어 2560×1664).
+   폰을 고른 채 이런 캡처가 들어오면 그 장은 노트북으로, 노트북을 고른 채 세로 스크린샷이 들어오면
+   그 장은 마지막에 쓴 폰으로 보낸다(여러 장을 섞어 넣어도 한 장씩). 폴드·듀오 안쪽 화면은 1.0~1.42 라 겹치지 않는다. */
+const isMacShot=(w,h)=>!!w && !!h && w/h>=1.5 && w/h<=1.62;
+const lastOf=b=>DEVICES[(S.last[b]||{}).dev] || DEVICES[DEFAULTS[b].dev];
 function devFor(w,h){
-  const d=dev(); if(!d.alt) return d;
+  let d=dev();
+  if(w && h){
+    if(d.form!=="laptop" && isMacShot(w,h)) return lastOf("mac");
+    if(d.form==="laptop" && h>w) d=lastOf(S.phoneBrand);
+  }
+  if(!d.alt) return d;
   if(S.fold==="alt") return d.alt;
   if(S.fold==="main" || !w || !h) return d;
   return h/w < (d.autoAr||1.5) ? d.alt : d;
@@ -1484,11 +1537,83 @@ ${sheen?`<g clip-path="url(#scr)"><rect x="${sc.x}" y="${sc.y}" width="${sc.w}" 
 </svg>`;
 }
 
+/* 노트북 프레임. 덮개는 얇은 알루미늄 테두리 안에 검은 유리 베젤, 화면 위 모서리만 둥글다.
+   본체는 덮개보다 넓고 아래 모서리를 안으로 말아(힌지 쪽이 살짝 넓다) 가운데 엄지 홈을 판다.
+   금속 질감은 폰과 같은 metalStops·VERT 를 쓴다. */
+function laptopSVG(d,c,sheen){
+  const bd=d.body, sc=d.screen, bs=d.base, vb=d.vb, cx=bd.w/2;
+  const rim=12;                                       // 덮개 알루미늄이 보이는 폭(1.2mm)
+  // 위 모서리 r, 아래 모서리 rb 인 사각형
+  const box=(x,y,w,h,r,rb)=>`M${x} ${y+r} A${r} ${r} 0 0 1 ${x+r} ${y} H${x+w-r} A${r} ${r} 0 0 1 ${x+w} ${y+r} V${y+h-rb} A${rb} ${rb} 0 0 1 ${x+w-rb} ${y+h} H${x+rb} A${rb} ${rb} 0 0 1 ${x} ${y+h-rb} Z`;
+  const lid=box(0,0,bd.w,bd.h,bd.r,14);
+  const glass=box(rim,rim,bd.w-rim*2,bd.h-rim*2,bd.r-rim,6);
+  const scr=box(sc.x,sc.y,sc.w,sc.h,sc.r,0);
+  // 본체: 윗변은 곧고, 양옆은 내려가며 안으로 말려 아랫변이 조금 좁다
+  const x0=bs.x, x1=bs.x+bs.w, y0=bs.y, y1=bs.y+bs.h, tuck=Math.round(bs.h*.95);
+  const deck=`M${x0+6} ${y0} H${x1-6} Q${x1} ${y0} ${x1} ${y0+8} V${y0+bs.h*.38} Q${x1-6} ${y1} ${x1-tuck} ${y1} H${x0+tuck} Q${x0+6} ${y1} ${x0} ${y0+bs.h*.38} V${y0+8} Q${x0} ${y0} ${x0+6} ${y0} Z`;
+  // 엄지 홈: 본체 윗변 가운데를 얕게 판 자리
+  const tw=300, td=Math.round(bs.h*.36);
+  const scoop=`M${cx-tw} ${y0} C${cx-tw*.62} ${y0} ${cx-tw*.6} ${y0+td} ${cx-tw*.3} ${y0+td} H${cx+tw*.3} C${cx+tw*.6} ${y0+td} ${cx+tw*.62} ${y0} ${cx+tw} ${y0} Z`;
+  const scoopEdge=`M${cx-tw*.86} ${y0+td*.42} C${cx-tw*.62} ${y0+td} ${cx-tw*.5} ${y0+td} ${cx-tw*.3} ${y0+td} H${cx+tw*.3} C${cx+tw*.5} ${y0+td} ${cx+tw*.62} ${y0+td} ${cx+tw*.86} ${y0+td*.42}`;
+  // 노치: 화면 위 가장자리에 붙은 검은 턱. 위쪽 양끝은 베젤로 살짝 휘어 들어간다
+  const k=d.cut, L=cx-k.w/2, R=cx+k.w/2, T=sc.y-1, B=sc.y+k.h, f=9, nb=16;
+  const notch=`M${L-f} ${T} Q${L} ${T} ${L} ${T+f} V${B-nb} Q${L} ${B} ${L+nb} ${B} H${R-nb} Q${R} ${B} ${R} ${B-nb} V${T+f} Q${R} ${T} ${R+f} ${T} Z`;
+  const camY=sc.y+k.h*.46;
+  const hingeX=Math.round(bd.r*.7);
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}">
+<defs>
+  <linearGradient id="lidH" x1="0" y1="0" x2="1" y2="0">${metalStops(c, rim/bd.w)}</linearGradient>
+  <linearGradient id="vert" x1="0" y1="0" x2="0" y2="1">${VERT}</linearGradient>
+  <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#141518"/><stop offset=".5" stop-color="#0C0D0F"/><stop offset="1" stop-color="#08090A"/></linearGradient>
+  <linearGradient id="deckV" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="${c.hi}"/><stop offset=".09" stop-color="${c.mid}"/>
+    <stop offset=".5" stop-color="${c.mid}"/><stop offset=".86" stop-color="${c.dk}"/><stop offset="1" stop-color="${c.lo}"/>
+  </linearGradient>
+  <linearGradient id="deckH" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#000" stop-opacity=".32"/><stop offset=".035" stop-color="#000" stop-opacity="0"/>
+    <stop offset=".5" stop-color="#fff" stop-opacity=".07"/>
+    <stop offset=".965" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".32"/>
+  </linearGradient>
+  <linearGradient id="lidShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".38"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>
+  <linearGradient id="scoop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c.lo}"/><stop offset="1" stop-color="${c.dk}"/></linearGradient>
+  <linearGradient id="hinge" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2B2C2F"/><stop offset=".45" stop-color="#0D0E10"/><stop offset="1" stop-color="#1E1F22"/></linearGradient>
+  <linearGradient id="shn" x1="0" y1="0" x2=".72" y2="1">${SHEEN}</linearGradient>
+  <mask id="hole">
+    <path d="${lid}" fill="#fff"/>
+    <path d="${scr}" fill="#000"/>
+  </mask>
+  <clipPath id="scr"><path d="${scr}"/></clipPath>
+</defs>
+<path d="${deck}" fill="url(#deckV)"/>
+<path d="${deck}" fill="url(#deckH)"/>
+<rect x="${x0+40}" y="${y0}" width="${bs.w-80}" height="2.4" fill="#fff" opacity=".55"/>
+<rect x="${hingeX}" y="${y0}" width="${bd.w-hingeX*2}" height="30" fill="url(#lidShade)"/>
+<path d="${scoop}" fill="url(#scoop)"/>
+<path d="${scoopEdge}" fill="none" stroke="#fff" stroke-opacity=".38" stroke-width="2.4"/>
+<rect x="${hingeX}" y="${bd.h-10}" width="${bd.w-hingeX*2}" height="24" rx="8" fill="url(#hinge)"/>
+<g mask="url(#hole)">
+  <path d="${lid}" fill="url(#lidH)"/>
+  <path d="${lid}" fill="url(#vert)" opacity=".7"/>
+  <path d="${glass}" fill="url(#glass)"/>
+  <path d="${box(rim+3,rim+3,bd.w-rim*2-6,bd.h-rim*2-6,bd.r-rim-3,4)}" fill="none" stroke="#fff" stroke-opacity=".06" stroke-width="2"/>
+  <path d="${box(1.6,1.6,bd.w-3.2,bd.h-3.2,bd.r-1.6,12)}" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="3.2"/>
+</g>
+<path d="${box(sc.x+1.5,sc.y+1.5,sc.w-3,sc.h-3,Math.max(sc.r-1.5,0),0)}" fill="none" stroke="#000" stroke-opacity=".5" stroke-width="3"/>
+<path d="${notch}" fill="#121316"/>
+<circle cx="${cx}" cy="${camY}" r="10" fill="#0A1018"/>
+<circle cx="${cx}" cy="${camY}" r="4.5" fill="#1B2C46" opacity=".9"/>
+<circle cx="${cx-2.5}" cy="${camY-2.5}" r="1.6" fill="#fff" opacity=".3"/>
+${sheen?`<g clip-path="url(#scr)"><rect x="${sc.x}" y="${sc.y}" width="${sc.w}" height="${sc.h}" fill="url(#shn)"/></g>`:""}
+</svg>`;
+}
+
 /* ── 상태 ─────────────────────────────────────────────────────── */
 /* 브랜드별 기본값. 처음 열 때(아이폰)와 그 브랜드를 처음 고를 때 씁니다 */
 const DEFAULTS = {
   apple:  {dev:"ip17pm", color:"cosmic-orange", mode:"native"},
-  samsung:{dev:"s26u",   color:"white",         mode:"qhd"}
+  samsung:{dev:"s26u",   color:"white",         mode:"qhd"},
+  mac:    {dev:"mbp14",  color:"space-gray",    mode:"native"}
 };
 const S = {
   ...DEFAULTS.apple,
@@ -1496,16 +1621,24 @@ const S = {
   form:"all",                                      // 폼팩터 거르기 — all · bar · fold · flip
   fit:"cover", letter:"#000000", sheen:false, island:true, fold:"auto", ratio:"fit",
   bg:"none", bg1:"#FFFFFF", bg2:"#DCE6F0", pad:0.06, shadow:true,
-  width:"900", shots:[], idx:0
+  width:"900", shots:[], idx:0,
+  phoneBrand:"apple"                               // 맥북을 고른 채 세로 스크린샷이 오면 보낼 폰 브랜드(마지막에 쓴 폰)
 };
 const $ = id => document.getElementById(id);
 const dev = () => DEVICES[S.dev];
 const color = () => dev().colors.find(c=>c.id===S.color) || dev().colors[0];
 const mode = () => dev().modes.find(m=>m.id===S.mode) || dev().modes[0];
+/* 장마다 다른 기기로 갈 수 있다(맥 캡처 → 노트북). 고른 기기와 브랜드가 같으면 지금 색,
+   다르면 그 브랜드에서 마지막에 쓴 색 */
+function colorOf(d){
+  if(d.brand===dev().brand) return color();
+  const want=(S.last[d.brand]||DEFAULTS[d.brand]).color;
+  return d.colors.find(c=>c.id===want) || d.colors[0];
+}
 
 /* ── 설정 저장 ─────────────────────────────────────────────────── */
-const KEYS=["dev","last","color","mode","form","fit","letter","sheen","island","fold","bg","bg1","bg2","pad","shadow","width","ratio"];
-function saveCfg(){ S.last[dev().brand]={dev:S.dev, color:S.color, mode:S.mode}; try{ const o={}; KEYS.forEach(k=>o[k]=S[k]); localStorage.setItem("phone-mockup",JSON.stringify(o)); }catch(e){} }
+const KEYS=["dev","last","color","mode","form","fit","letter","sheen","island","fold","bg","bg1","bg2","pad","shadow","width","ratio","phoneBrand"];
+function saveCfg(){ S.last[dev().brand]={dev:S.dev, color:S.color, mode:S.mode}; if(dev().form!=="laptop") S.phoneBrand=dev().brand; try{ const o={}; KEYS.forEach(k=>o[k]=S[k]); localStorage.setItem("phone-mockup",JSON.stringify(o)); }catch(e){} }
 function loadCfg(){
   try{
     const o=JSON.parse(localStorage.getItem("phone-mockup")||"{}");
@@ -1518,6 +1651,7 @@ function loadCfg(){
       const v=typeof L[b]==="string" ? {dev:L[b]} : L[b];
       S.last[b]=(v && DEVICES[v.dev] && DEVICES[v.dev].brand===b) ? {...DEFAULTS[b], ...v} : {...DEFAULTS[b]};
     });
+    if(!["apple","samsung"].includes(S.phoneBrand)) S.phoneBrand="apple";
     fixDevice();
   }catch(e){}
 }
@@ -1560,9 +1694,10 @@ async function openVideo(file){
 function closeVideo(v){ if(v&&v.__url){ try{ v.pause(); }catch(e){} URL.revokeObjectURL(v.__url); v.__url=null; } }
 const frameCache=new Map();
 async function frameImage(d, own=false){
-  const key=`${d.slug}|${S.color}|${S.sheen}|${own}`;
+  const c=colorOf(d);
+  const key=`${d.slug}|${c.id}|${S.sheen}|${own}`;
   if(frameCache.has(key)) return frameCache.get(key);
-  const svg=d.frame(color(),S.sheen,own);
+  const svg=d.frame(c,S.sheen,own);
   const img=await loadImage("data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg));
   frameCache.set(key,img);
   return img;
@@ -1584,13 +1719,14 @@ function outputSize(d=dev()){
 }
 
 /* ── 합성 ──────────────────────────────────────────────────────── */
-function rr(ctx,x,y,w,h,r){
-  r=Math.min(r,w/2,h/2);
+/* rb — 아래 두 모서리 반경(없으면 r). 노트북 화면은 위만 둥글다 */
+function rr(ctx,x,y,w,h,r,rb=r){
+  r=Math.min(r,w/2,h/2); rb=Math.min(rb,w/2,h/2);
   ctx.beginPath();
   ctx.moveTo(x+r,y);
   ctx.arcTo(x+w,y,x+w,y+h,r);
-  ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x+w,y+h,x,y+h,rb);
+  ctx.arcTo(x,y+h,x,y,rb);
   ctx.arcTo(x,y,x+w,y,r);
   ctx.closePath();
 }
@@ -1621,7 +1757,19 @@ const SIGN_LOGO="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAeAAAABzCAYAAABAU
 let signImg=null;
 async function signMark(ctx, d, ox, oy, k){
   if(!signImg) signImg=await loadImage(SIGN_LOGO);
-  const bd=d.body, sc=d.screen, c=color();
+  const bd=d.body, sc=d.screen, c=colorOf(d);
+  // 노트북은 화면 아래 검은 턱 가운데(힌지에 가리는 아래 10칸은 뺀다). 폰보다 판이 커서 한도를 3mm 로 둔다
+  if(d.form==="laptop"){
+    const top=sc.y+sc.h, bot=bd.h-10, cy=(top+bot)/2;
+    const h=Math.min((bot-top)*.26, 30), w=h*signImg.naturalWidth/signImg.naturalHeight;
+    const W=Math.max(1,Math.round(w*k)), H=Math.max(1,Math.round(h*k));
+    const off=document.createElement("canvas"); off.width=W; off.height=H;
+    const o=off.getContext("2d");
+    o.imageSmoothingQuality="high"; o.drawImage(signImg,0,0,W,H);
+    o.globalCompositeOperation="source-in"; o.fillStyle="rgba(255,255,255,.5)"; o.fillRect(0,0,W,H);
+    ctx.drawImage(off, Math.round(ox+(bd.w/2-w/2)*k), Math.round(oy+(cy-h/2)*k));
+    return;
+  }
   // 홈 버튼 기종은 금속 띠가 너무 가늘어(로고가 3~4px) 홈 버튼 아래 유리 턱 가운데에 새긴다
   let top, bot, base;
   if(d.cut.type==="home"){
@@ -1662,12 +1810,23 @@ async function compose(canvas, shotImg, out){
   }
 
   // 2. 그림자 (기기 윤곽을 채워 그린 뒤 그 위를 프레임이 덮음)
-  if(S.shadow){
+  if(S.shadow && d.form==="laptop"){
+    // 노트북은 본체 아래에만 옅게 깐다. 본체 실루엣 안쪽을 채워 그 그림자만 남기고, 채운 면은 프레임이 덮는다
+    const b=d.base;
+    ctx.save();
+    ctx.shadowColor="rgba(12,16,22,.26)";
+    ctx.shadowBlur=U(d.vb.w*0.02);
+    ctx.shadowOffsetY=U(b.h*0.55);
+    ctx.fillStyle=colorOf(d).mid;
+    rr(ctx, ox+U(b.x+b.h*1.2), oy+U(b.y+4), U(b.w-b.h*2.4), U(b.h-8), U(b.h*.3));
+    ctx.fill();
+    ctx.restore();
+  } else if(S.shadow){
     ctx.save();
     ctx.shadowColor="rgba(12,16,22,.34)";
     ctx.shadowBlur=U(d.vb.w*0.055);
     ctx.shadowOffsetY=U(d.vb.w*0.028);
-    ctx.fillStyle=color().mid;
+    ctx.fillStyle=colorOf(d).mid;
     rr(ctx, ox+U(d.body.x), oy+U(d.body.y), U(d.body.w), U(d.body.h), U(d.body.r));
     ctx.fill();
     ctx.restore();
@@ -1677,7 +1836,7 @@ async function compose(canvas, shotImg, out){
   const sx=ox+U(d.screen.x), sy=oy+U(d.screen.y), sw=U(d.screen.w), sh=U(d.screen.h);
   if(shotImg){
     ctx.save();
-    rr(ctx,sx,sy,sw,sh,U(d.screen.r));
+    rr(ctx,sx,sy,sw,sh,U(d.screen.r),U(d.screen.rb!=null?d.screen.rb:d.screen.r));
     ctx.clip();
     if(S.fit==="contain"){ ctx.fillStyle=S.letter; ctx.fillRect(sx,sy,sw,sh); }
     const ar=mediaW(shotImg)/mediaH(shotImg), target=sw/sh;
@@ -1688,7 +1847,7 @@ async function compose(canvas, shotImg, out){
     ctx.drawImage(shotImg, sx+(sw-dw)/2, sy+(sh-dh)/2, dw, dh);
     ctx.restore();
   } else {
-    ctx.save(); rr(ctx,sx,sy,sw,sh,U(d.screen.r));
+    ctx.save(); rr(ctx,sx,sy,sw,sh,U(d.screen.r),U(d.screen.rb!=null?d.screen.rb:d.screen.r));
     ctx.fillStyle="#0B0D10"; ctx.fill(); ctx.restore();
   }
 
@@ -1777,6 +1936,13 @@ async function addFiles(files){
     }catch(e){ skipped.push(file.name); }
   }
   if(S.shots.length>start) S.idx=start;
+  // 새로 넣은 장이 모두 맥 캡처면 맥북으로, 모두 세로(폰)인데 맥북을 보고 있었으면 마지막 폰으로 설정판을 옮긴다.
+  // 섞여 있으면 그대로 두고 장마다 devFor 가 고른다
+  const added=S.shots.slice(start);
+  if(added.length){
+    if(dev().form!=="laptop" && added.every(x=>isMacShot(x.w,x.h))) setBrand("mac");
+    else if(dev().form==="laptop" && added.every(x=>x.h>x.w)) setBrand(S.phoneBrand);
+  }
   if(skipped.length){
     const mov=skipped.some(n=>/\.(mov|qt)$/i.test(n));
     setStatus(mov
@@ -1864,6 +2030,9 @@ function videoName(fmt){
 }
 function outName(shot,i){
   const base=(shot?shot.name:"mockup").replace(/\.[^.]+$/,"").slice(0,60) || `mockup-${i+1}`;
+  // 맥 캡처처럼 다른 브랜드 기기로 간 장은 그 기기 이름·색으로 짓는다(같은 브랜드면 예전 그대로)
+  const d=shot ? devFor(shot.w,shot.h) : dev();
+  if(d.brand!==dev().brand) return `${base}_${d.slug}-${colorOf(d).id}.png`;
   return `${base}_${dev().slug}-${S.color}.png`;
 }
 async function saveBlob(name,blob){
@@ -2260,7 +2429,7 @@ async function exportShots(indices){
 /* ── UI 구성 ──────────────────────────────────────────────────── */
 /* 아이폰/갤럭시 버튼으로 브랜드를 고르고, 모델은 목록에서 고릅니다. */
 /* 형태(폼팩터) — 바형·폴더블·플립. 브랜드에 있는 형태만 보입니다(아이폰은 플립이 없어 빠집니다) */
-const FORMS=[["all","형태 전체"],["bar","바형"],["fold","폴더블"],["flip","플립"]];
+const FORMS=[["all","형태 전체"],["bar","바형"],["fold","폴더블"],["flip","플립"],["laptop","노트북"]];
 const devList=(brand,form)=>Object.entries(DEVICES)
   .filter(([,d])=>d.brand===brand && (form==="all"||d.form===form));
 function buildForm(){
@@ -2334,7 +2503,8 @@ function buildModes(){
   // 한 줄에 이어 붙이면 좁은 설정판에서 '맞 / 추세요' 처럼 끊겨 두 줄 목록으로 나눈다
   const spec=$("devSpec"); spec.textContent="";
   (d.alt ? [`권장 스크린샷 ${mode().w} × ${mode().h} px (${d.screens[0]})`, `권장 스크린샷 ${d.alt.modes[0].w} × ${d.alt.modes[0].h} px (${d.screens[1]})`]
-           : [`권장 스크린샷 ${mode().w} × ${mode().h} px`, ...(d.modes.length>1 ? ["기기 설정의 화면 해상도와 맞추세요"] : [])])
+           : [`권장 스크린샷 ${mode().w} × ${mode().h} px`, ...(d.modes.length>1 ? ["기기 설정의 화면 해상도와 맞추세요"] : []),
+              ...(d.form==="laptop" ? ["전체 화면 캡처(⇧⌘3)를 메뉴 막대째로 넣으세요"] : [])])
     .forEach(t=>{ const li=document.createElement("li"); li.textContent=t; spec.appendChild(li); });
 }
 function bindSeg(id,key,after){
@@ -2417,7 +2587,8 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape" && !$("help").hidde
 
 /* ── 기기 검색 ── 이름으로 바로 찾는다. '울트라·플러스·프로·맥스·엣지' 같은 한글도 받고,
    띄어 쓴 낱말은 순서와 상관없이 모두 들어간 기기만 보인다(짧은 이름부터 = 더 정확한 것부터). */
-const ALIAS=[["갤럭시","galaxy"],["아이폰","iphone"],["울트라","ultra"],["플러스","plus"],["프로","pro"],["맥스","max"],
+const BRAND_KO={apple:"아이폰", samsung:"갤럭시", mac:"맥북"};
+const ALIAS=[["맥북","macbook"],["갤럭시","galaxy"],["아이폰","iphone"],["울트라","ultra"],["플러스","plus"],["프로","pro"],["맥스","max"],
   ["엣지","edge"],["에지","edge"],["에어","air"],["미니","mini"],["폴드","fold"],["플립","flip"],["듀오","duo"],["+","plus"],["세대",""]];
 const normName=t=>{ t=t.toLowerCase(); for(const [a,b] of ALIAS) t=t.split(a).join(b); return t.replace(/[^a-z0-9]/g,""); };
 const DEV_INDEX=Object.entries(DEVICES).map(([id,d])=>({id,d,key:normName(d.name)}));
@@ -2433,7 +2604,7 @@ function searchDevices(q){
     if(!q.value.trim()){ box.hidden=true; hits=[]; return; }
     hits=searchDevices(q.value); sel=0;
     box.innerHTML = hits.length
-      ? hits.map((h,i)=>`<button type="button" class="dhit" role="option" data-id="${h.id}" aria-selected="${i===0}">${h.d.name}<small>${h.d.brand==="apple"?"아이폰":"갤럭시"}</small></button>`).join("")
+      ? hits.map((h,i)=>`<button type="button" class="dhit" role="option" data-id="${h.id}" aria-selected="${i===0}">${h.d.name}<small>${BRAND_KO[h.d.brand]}</small></button>`).join("")
       : '<div class="dnone">검색 결과 없음</div>';
     box.hidden=false;
   };
